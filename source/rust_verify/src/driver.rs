@@ -45,6 +45,8 @@ where
     }
 
     let time1 = Instant::now();
+    
+    eprintln!(">>> #[code] #[proof]");
 
     // Run borrow checker with both #[code] and #[proof]
     if !verifier.args.no_lifetime {
@@ -66,6 +68,8 @@ where
     }
 
     let time2 = Instant::now();
+
+    eprintln!(">>> #[code]");
 
     // Run borrow checker and compiler on #[code] (if enabled)
     if verifier.args.compile {

@@ -164,3 +164,25 @@ test_verify_one_file! {
         }
     } => Err(_)
 }
+
+test_verify_one_file! {
+    #[test] regression_int_if code! {
+        fn int_if() {
+            #[spec] let a: int = 3;
+            #[spec] if a == 4 {
+                assert(false);
+            }
+        }
+
+        // fn int_if_2(a: int) -> int {
+        //     ensures(|result: int| imply(2 <= a && a <= 3, result == a + 1));
+        //     if a == 2 {
+        //         3
+        //     } else if a == 3 {
+        //         4
+        //     } else {
+        //         arbitrary()
+        //     }
+        // }
+    } => Ok(())
+}

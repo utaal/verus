@@ -71,7 +71,7 @@ use vir::ast::{
     Datatype, ExprX, Function, GenericBoundX, Krate, Mode, Path, Pattern, PatternX, UnaryOpr,
 };
 use vir::ast_util::get_field;
-use vir::modes::{mode_join, ErasureModes};
+use vir::modes::{mode_le, mode_join, ErasureModes};
 
 /// Information about each call in the AST (each ExprKind::Call).
 #[derive(Clone, Debug)]
@@ -382,6 +382,7 @@ fn erase_expr(ctxt: &Ctxt, mctxt: &mut MCtxt, expect: Mode, expr: &Expr) -> Expr
 /// Erase ghost code from expr, and return Some resulting expression.
 /// If the entire expression is ghost, return None.
 fn erase_expr_opt(ctxt: &Ctxt, mctxt: &mut MCtxt, expect: Mode, expr: &Expr) -> Option<Expr> {
+    // TODO eprintln!("{:?} {:?}", expect, expr);
     let kind = match &expr.kind {
         ExprKind::Lit(_) => {
             if keep_mode(ctxt, expect) {
@@ -638,11 +639,12 @@ fn erase_expr_opt(ctxt: &Ctxt, mctxt: &mut MCtxt, expect: Mode, expr: &Expr) -> 
                 let eb = eb_erase.expect("erase_expr");
                 keep(mctxt, eb)
             } else {
-                assert!(expect != Mode::Exec);
-                if !ctxt.keep_proofs {
-                    let eb = eb_erase.expect("erase_expr");
-                    return Some(eb);
-                } else if modeb == Mode::Spec && expect == Mode::Proof {
+                // TODO remove if expect == Mode::Exec {
+                // eprintln!("## {:?}", eb);
+                // eprintln!("@@ {:?} {:?} {:?} {:?}", expr, eb_erase, expect, modeb);
+                // TODO remove }
+                // assert!(expect != Mode::Exec);
+                if ctxt.keep_proofs && modeb == Mode::Spec && mode_le(expect, Mode::Proof) {
                     // We erase eb, so we have no bool for the If.
                     // Create a nondeterministic boolean to take eb's place.
                     let e_nondet = call_arbitrary(ctxt, mctxt, expr.span);
@@ -654,8 +656,11 @@ fn erase_expr_opt(ctxt: &Ctxt, mctxt: &mut MCtxt, expect: Mode, expr: &Expr) -> 
                     );
                     keep(mctxt, eb.expect("e_nondet"))
                 } else {
-                    let eb = eb_erase.expect("erase_expr");
-                    keep(mctxt, eb)
+                    if let Some(eb) = eb_erase {
+                        keep(mctxt, eb)
+                    } else {
+                        return None;
+                    }
                 }
             }
         }
@@ -774,6 +779,7 @@ fn erase_block(ctxt: &Ctxt, mctxt: &mut MCtxt, expect: Mode, block: &Block) -> B
 fn erase_fn(ctxt: &Ctxt, mctxt: &mut MCtxt, f: &FnKind) -> Option<FnKind> {
     let FnKind(defaultness, sig, generics, body_opt) = f;
     let f_vir = &ctxt.functions_by_span[&sig.span];
+    eprintln!("### {:?}", f_vir.x.path);
     if !keep_mode(ctxt, f_vir.x.mode) {
         return None;
     }
@@ -813,11 +819,15 @@ fn erase_assoc_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &AssocItem) -> Option<
             if vattrs.external {
                 return Some(item.clone());
             }
-            match erase_fn(ctxt, mctxt, f) {
-                None => None,
-                Some(f) => Some(update_item(item, AssocItemKind::Fn(Box::new(f)))),
-            }
-        }
+            // TODO more defensive?
+            let FnKind(_, sig, _, _) = &**f;
+            ctxt.functions_by_span.get(&sig.span)
+                .and_then(|_| erase_fn(ctxt, mctxt, f))
+                .map(|f| update_item(item, AssocItemKind::Fn(Box::new(f))))
+        },
+        AssocItemKind::TyAlias(_) => {
+            Some(item.clone())
+        },
         _ => panic!("unsupported AssocItemKind"),
     }
 }
@@ -890,9 +900,11 @@ fn erase_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &Item) -> Vec<P<Item>> {
             }
         }
         ItemKind::Impl(kind) => {
-            if let Some(TraitRef { .. }) = kind.of_trait {
-                return vec![P(item.clone())];
-            }
+            // TODO SOUNDNESS
+            // if let Some(TraitRef { .. }) = kind.of_trait {
+            //     eprintln!(">>> of_trait {:?}", kind.of_trait);
+            //     return vec![P(item.clone())];
+            // }
             let mut items: Vec<P<AssocItem>> = Vec::new();
             for item in &kind.items {
                 if let Some(item) = erase_assoc_item(ctxt, mctxt, &item) {
