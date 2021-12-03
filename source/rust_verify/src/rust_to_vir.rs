@@ -120,6 +120,7 @@ fn check_item<'tcx>(
                         format!("Structural impl for non-structural type {:?}", ty),
                         ty
                     );
+                    return Ok(());
                 } else if path_name == "core::marker::StructuralEq"
                         || path_name == "core::cmp::Eq"
                         || path_name == "core::marker::StructuralPartialEq"

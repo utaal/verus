@@ -826,9 +826,13 @@ fn erase_assoc_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &AssocItem) -> Option<
             }
             // TODO more defensive?
             let FnKind(_, sig, _, _) = &**f;
-            ctxt.functions_by_span.get(&sig.span)
-                .and_then(|_| erase_fn(ctxt, mctxt, f))
-                .map(|f| update_item(item, AssocItemKind::Fn(Box::new(f))))
+            match ctxt.functions_by_span.get(&sig.span) {
+                Some(_) => {
+                    let erased = erase_fn(ctxt, mctxt, f);
+                    erased.map(|f| update_item(item, AssocItemKind::Fn(Box::new(f))))
+                },
+                None => Some(item.clone()),
+            }
         },
         AssocItemKind::TyAlias(_) => {
             Some(item.clone())

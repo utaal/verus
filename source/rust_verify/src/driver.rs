@@ -35,6 +35,8 @@ where
     let mut time_erasure1 = Duration::new(0, 0);
     let mut time_erasure2 = Duration::new(0, 0);
 
+    eprintln!(">>> #[verifer]");
+
     // Run verifier callback to build VIR tree and run verifier
     let status = mk_compiler(rustc_args, verifier, file_loader).run();
     match status {
