@@ -168,3 +168,39 @@ test_verify_one_file! {
         }
     } => Ok(())
 }
+
+test_verify_one_file! {
+    #[test] test_ops_trait_impl code! {
+        #[derive(PartialEq, Eq)] #[spec]
+        struct V {
+            one: nat,
+            two: nat,
+        }
+
+        impl V {
+            #[spec]
+            fn get_one(self) -> nat {
+                self.one
+            }
+        }
+
+        impl std::ops::Index<int> for V {
+            type Output = nat;
+
+            #[spec]
+            fn index(&self, idx: int) -> &nat {
+                if idx == 0 { // why do I need the cast?
+                    &self.one
+                } else if idx == 1 {
+                    &self.two
+                } else {
+                    arbitrary()
+                }
+            }
+        }
+
+        fn test(v: V) {
+            requires(v[0] == 3);
+        }
+    } => Ok(())
+}

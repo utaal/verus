@@ -35,7 +35,8 @@ fn is_self_or_self_ref(span: Span, ty: &rustc_hir::Ty) -> Result<bool, VirErr> {
         ) => is_self_or_self_ref(span, rty),
         rustc_hir::TyKind::Path(rustc_hir::QPath::Resolved(None, path)) => match path.res {
             rustc_hir::def::Res::SelfTy(Some(_), _impl_def_id) => {
-                unsupported_err!(span, "trait self", ty)
+                // TODO need to use the trait?
+                Ok(true)
             }
             rustc_hir::def::Res::SelfTy(None, _) => Ok(true),
             _ => Ok(false),

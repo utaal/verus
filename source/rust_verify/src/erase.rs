@@ -824,11 +824,15 @@ fn erase_assoc_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &AssocItem) -> Option<
             if vattrs.external {
                 return Some(item.clone());
             }
-            match erase_fn(ctxt, mctxt, f) {
-                None => None,
-                Some(f) => Some(update_item(item, AssocItemKind::Fn(Box::new(f)))),
-            }
-        }
+            // TODO more defensive?
+            let FnKind(_, sig, _, _) = &**f;
+            ctxt.functions_by_span.get(&sig.span)
+                .and_then(|_| erase_fn(ctxt, mctxt, f))
+                .map(|f| update_item(item, AssocItemKind::Fn(Box::new(f))))
+        },
+        AssocItemKind::TyAlias(_) => {
+            Some(item.clone())
+        },
         _ => panic!("unsupported AssocItemKind"),
     }
 }
@@ -901,9 +905,11 @@ fn erase_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &Item) -> Vec<P<Item>> {
             }
         }
         ItemKind::Impl(kind) => {
-            if let Some(TraitRef { .. }) = kind.of_trait {
-                return vec![P(item.clone())];
-            }
+            // TODO SOUNDNESS
+            // if let Some(TraitRef { .. }) = kind.of_trait {
+            //     eprintln!(">>> of_trait {:?}", kind.of_trait);
+            //     return vec![P(item.clone())];
+            // }
             let mut items: Vec<P<AssocItem>> = Vec::new();
             for item in &kind.items {
                 if let Some(item) = erase_assoc_item(ctxt, mctxt, &item) {
