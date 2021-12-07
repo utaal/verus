@@ -1120,6 +1120,22 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
             let body = expr_to_vir(bctx, &body.value)?;
             Ok(mk_expr(ExprX::Closure { params: Arc::new(params), body, closure_impl: None }))
         }
+        ExprKind::Index(tgt_expr, idx_expr) => {
+            let tgt_vir = expr_to_vir(bctx, tgt_expr)?;
+            if let TypX::Datatype(path, dt_typs) = &*tgt_vir.typ {
+                let tgt_index_path = {
+                    let mut tp = path.clone();
+                    // TODO move string
+                    Arc::make_mut(&mut Arc::make_mut(&mut tp).segments).push(str_ident("index"));
+                    tp
+                };
+                let idx_vir = expr_to_vir(bctx, idx_expr)?;
+                let target = CallTarget::Path(tgt_index_path, Arc::new(vec![]));
+                Ok(mk_expr(ExprX::Call(target, Arc::new(vec![tgt_vir, idx_vir]))))
+            } else {
+                unsupported_err!(expr.span, format!("Index on non-datatype"), expr)
+            }
+        }
         _ => {
             unsupported_err!(expr.span, format!("expression"), expr)
         }

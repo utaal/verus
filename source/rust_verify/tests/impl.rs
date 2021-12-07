@@ -170,6 +170,31 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
+    #[test] test_ops_trait_impl_zero code! {
+        #[derive(PartialEq, Eq)] #[spec]
+        struct V {
+            one: nat,
+            two: nat,
+        }
+
+        impl std::ops::Index<int> for V {
+            type Output = nat;
+
+            #[spec]
+            fn index(&self, idx: int) -> &nat {
+                if idx == 0 { // why do I need the cast?
+                    &self.one
+                } else if idx == 1 {
+                    &self.two
+                } else {
+                    arbitrary()
+                }
+            }
+        }
+    } => Ok(())
+}
+
+test_verify_one_file! {
     #[test] test_ops_trait_impl code! {
         #[derive(PartialEq, Eq)] #[spec]
         struct V {
@@ -201,6 +226,20 @@ test_verify_one_file! {
 
         fn test(v: V) {
             requires(v[0] == 3);
+
+            assert(v[0] + 1 == 4);
         }
+    } => Ok(())
+}
+
+test_verify_one_file! {
+    #[test] test_illegal_trait_impl code! {
+        #[derive(PartialEq, Eq)]
+        struct V {
+            one: nat,
+            two: nat,
+        }
+
+        // TODO TODO !
     } => Ok(())
 }
