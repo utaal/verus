@@ -229,7 +229,7 @@ pub struct ArmX {
 #[derive(Clone, Debug)]
 pub enum CallTarget {
     /// Call a statically known function, passing some type arguments
-    Path(Path, Typs),
+    Static(Fun, Typs),
     /// Call a dynamically computed FnSpec (no type arguments allowed),
     /// where the function type is specified by the GenericBound of typ_param.
     /// Note: this is replaced by Path in ast_simplify.
@@ -344,12 +344,24 @@ pub struct FunctionAttrsX {
     pub custom_req_err: Option<String>,
 }
 
+/// Static function identifier
+pub type Fun = Arc<FunX>;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FunX {
+    /// Path of function
+    pub path: Path,
+    /// Path of the trait that defines the function, if any.
+    /// This disambiguates between impls for the same type of multiple traits that define functions
+    /// with the same name.
+    pub trait_path: Option<Path>,
+}
+
 /// Function, including signature and body
 pub type Function = Arc<Spanned<FunctionX>>;
 #[derive(Debug, Clone)]
 pub struct FunctionX {
     /// Name of function
-    pub path: Path,
+    pub name: Fun,
     /// Access control (public/private)
     pub visibility: Visibility,
     /// exec functions are compiled, proof/spec are erased

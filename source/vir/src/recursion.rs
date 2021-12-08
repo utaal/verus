@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryOp, CallTarget, Constant, Function, Ident, IntRange, Params, Path, Typ, TypX, UnaryOp,
+    BinaryOp, CallTarget, Constant, Function, Ident, IntRange, Params, Fun, Typ, TypX, UnaryOp,
     UnaryOpr, VirErr,
 };
 use crate::ast_util::err_str;
@@ -21,12 +21,12 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 struct Ctxt<'a> {
-    recursive_function_path: Path,
+    recursive_function_path: Fun,
     params: Params,
     decreases_at_entry: Ident,
     decreases_exp: Exp,
     decreases_typ: Typ,
-    scc_rep: Path,
+    scc_rep: Fun,
     ctx: &'a Ctx,
 }
 
@@ -74,7 +74,7 @@ fn check_decrease_rename(ctxt: &Ctxt, span: &Span, args: &Exps) -> Exp {
     check_decrease(ctxt, &e_dec)
 }
 
-fn update_decreases_exp<'a>(ctxt: &'a Ctxt, name: &Path) -> Result<Ctxt<'a>, VirErr> {
+fn update_decreases_exp<'a>(ctxt: &'a Ctxt, name: &Fun) -> Result<Ctxt<'a>, VirErr> {
     let function = ctxt.ctx.func_map.get(name).expect("func_map should hold all functions");
     let new_decreases_expr = function
         .x
@@ -179,7 +179,7 @@ fn terminates(ctxt: &Ctxt, exp: &Exp) -> Result<Exp, VirErr> {
     }
 }
 
-pub(crate) fn is_recursive_exp(ctx: &Ctx, name: &Path, body: &Exp) -> bool {
+pub(crate) fn is_recursive_exp(ctx: &Ctx, name: &Fun, body: &Exp) -> bool {
     if ctx.func_call_graph.get_scc_size(name) > 1 {
         // This function is part of a mutually recursive component
         true
@@ -197,7 +197,7 @@ pub(crate) fn is_recursive_exp(ctx: &Ctx, name: &Path, body: &Exp) -> bool {
     }
 }
 
-pub(crate) fn is_recursive_stm(ctx: &Ctx, name: &Path, body: &Stm) -> bool {
+pub(crate) fn is_recursive_stm(ctx: &Ctx, name: &Fun, body: &Stm) -> bool {
     if ctx.func_call_graph.get_scc_size(name) > 1 {
         // This function is part of a mutually recursive component
         true
@@ -375,14 +375,14 @@ pub(crate) fn check_termination_stm(
 }
 
 fn add_call_graph_edges(
-    call_graph: &mut Graph<Path>,
-    src: &Path,
+    call_graph: &mut Graph<Fun>,
+    src: &Fun,
     expr: &crate::ast::Expr,
 ) -> Result<crate::ast::Expr, VirErr> {
     use crate::ast::ExprX;
 
     match &expr.x {
-        ExprX::Call(CallTarget::Path(x, _), _) | ExprX::Fuel(x, _) => {
+        ExprX::Call(CallTarget::Fun(x, _), _) | ExprX::Fuel(x, _) => {
             call_graph.add_edge(src.clone(), x.clone())
         }
         _ => {}
@@ -391,7 +391,7 @@ fn add_call_graph_edges(
 }
 
 pub(crate) fn expand_call_graph(
-    call_graph: &mut Graph<Path>,
+    call_graph: &mut Graph<Fun>,
     function: &Function,
 ) -> Result<(), VirErr> {
     // We only traverse expressions (not statements), since calls only appear in the former (see ast.rs)

@@ -1,10 +1,10 @@
 use crate::ast::{
-    BinaryOp, Ident, Idents, IntRange, Mode, Params, Path, Typ, TypX, Typs, UnaryOp, UnaryOpr,
+    BinaryOp, Ident, Idents, IntRange, Mode, Params, Path, Fun, Typ, TypX, Typs, UnaryOp, UnaryOpr,
 };
 use crate::ast_util::{get_field, get_variant};
 use crate::context::Ctx;
 use crate::def::{
-    path_to_string, prefix_box, prefix_ensures, prefix_fuel_id, prefix_requires, suffix_global_id,
+    path_to_string, fun_to_string, prefix_box, prefix_ensures, prefix_fuel_id, prefix_requires, suffix_global_id,
     suffix_local_expr_id, suffix_local_stmt_id, suffix_local_unique_id, suffix_typ_param_id,
     variant_field_ident, variant_ident, SnapPos, SpanKind, Spanned, FUEL_BOOL, FUEL_BOOL_DEFAULT,
     FUEL_DEFAULTS, FUEL_ID, FUEL_PARAM, FUEL_TYPE, POLY, SNAPSHOT_CALL, SUCC, SUFFIX_SNAP_JOIN,
@@ -24,6 +24,11 @@ use air::ast_util::{
 };
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+#[inline(always)]
+pub(crate) fn fun_to_air_ident(fun: &Fun) -> Ident {
+    Arc::new(fun_to_string(fun))
+}
 
 #[inline(always)]
 pub(crate) fn path_to_air_ident(path: &Path) -> Ident {
