@@ -23,7 +23,7 @@ use rustc_span::def_id::DefId;
 use rustc_span::Span;
 use std::sync::Arc;
 use vir::ast::{
-    ArmX, BinaryOp, CallTarget, Constant, ExprX, HeaderExpr, HeaderExprX, Ident, IntRange, Mode,
+    ArmX, BinaryOp, CallTarget, Constant, FunX, ExprX, HeaderExpr, HeaderExprX, Ident, IntRange, Mode,
     PatternX, SpannedTyped, StmtX, Stmts, Typ, TypX, UnaryOp, UnaryOpr, VirErr,
 };
 use vir::ast_util::{ident_binder, path_as_rust_name};
@@ -196,7 +196,7 @@ pub(crate) fn expr_to_vir<'tcx>(
 fn record_fun(
     ctxt: &crate::context::Context,
     span: Span,
-    path: &vir::ast::Path,
+    name: &vir::ast::Fun,
     is_spec: bool,
     is_compilable_operator: bool,
 ) {
@@ -206,12 +206,13 @@ fn record_fun(
     } else if is_compilable_operator {
         ResolvedCall::CompilableOperator
     } else {
-        ResolvedCall::Call(path.clone())
+        ResolvedCall::Call(name.clone())
     };
     erasure_info.resolved_calls.push((span.data(), resolved_call));
 }
 
 fn get_fn_path<'tcx>(tcx: TyCtxt<'tcx>, expr: &Expr<'tcx>) -> Result<vir::ast::Path, VirErr> {
+    // TODO nocheckin convert to return a Fun?
     match &expr.kind {
         ExprKind::Path(QPath::Resolved(None, path)) => match path.res {
             Res::Def(DefKind::Fn, id) => Ok(def_id_to_vir_path(tcx, id)),
@@ -273,10 +274,16 @@ fn fn_call_to_vir<'tcx>(
     let is_directive = is_hide || is_reveal || is_reveal_fuel;
     let is_cmp = is_equal || is_eq || is_ne || is_le || is_ge || is_lt || is_gt;
     let is_arith_binary = is_add || is_sub || is_mul;
+
+    dbg!(fun_ty);
+    let name = Arc::new(FunX {
+        path,
+        trait_path: todo!(),
+    });
     record_fun(
         &bctx.ctxt,
         fn_span,
-        &path,
+        &name,
         is_spec || is_quant || is_directive || is_assert_by,
         is_implies,
     );
@@ -320,7 +327,7 @@ fn fn_call_to_vir<'tcx>(
             let header = Arc::new(HeaderExprX::Hide(x));
             return Ok(mk_expr(ExprX::Header(header)));
         } else {
-            return Ok(mk_expr(ExprX::Fuel(x, 1)));
+            return Ok(mk_expr(ExprX::Fuel(Arc::new(FunX { path: x, trait_path: todo!() }), 1)));
         }
     }
     if is_reveal_fuel {
@@ -329,7 +336,7 @@ fn fn_call_to_vir<'tcx>(
         match &expr_to_vir(bctx, &args[1])?.x {
             ExprX::Const(Constant::Nat(s)) => {
                 let n = s.parse::<u32>().expect(&format!("internal error: parse {}", s));
-                return Ok(mk_expr(ExprX::Fuel(x, n)));
+                return Ok(mk_expr(ExprX::Fuel(Arc::new(FunX { path: x, trait_path: todo!() }), n)));
             }
             _ => panic!("internal error: is_reveal_fuel"),
         }
@@ -425,7 +432,7 @@ fn fn_call_to_vir<'tcx>(
                 _ => unsupported_err!(expr.span, format!("lifetime/const type arguments"), expr),
             }
         }
-        let target = CallTarget::Path(path, Arc::new(typ_args));
+        let target = CallTarget::Static(name, Arc::new(typ_args));
         let param_typs_is_tparam = vec_map(&param_typs, |t| matches!(**t, TypX::TypParam(..)));
         let ret_typ_is_tparam = ret_typ.map(|t| matches!(*t, TypX::TypParam(..)));
         fn_exp_call_to_vir(
@@ -1129,8 +1136,9 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                     Arc::make_mut(&mut Arc::make_mut(&mut tp).segments).push(str_ident("index"));
                     tp
                 };
+                let tgt_index_trait_path = todo!();
                 let idx_vir = expr_to_vir(bctx, idx_expr)?;
-                let target = CallTarget::Path(tgt_index_path, Arc::new(vec![]));
+                let target = CallTarget::Static(Arc::new(FunX { path: tgt_index_path, trait_path: tgt_index_trait_path }), Arc::new(vec![]));
                 Ok(mk_expr(ExprX::Call(target, Arc::new(vec![tgt_vir, idx_vir]))))
             } else {
                 unsupported_err!(expr.span, format!("Index on non-datatype"), expr)

@@ -60,7 +60,7 @@ pub enum StmX {
         rhs: Exp,
         is_init: bool,
     },
-    Fuel(Path, u32),
+    Fuel(Fun, u32),
     DeadEnd(Stm),
     If(Exp, Stm, Option<Stm>),
     While {

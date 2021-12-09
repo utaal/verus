@@ -12,7 +12,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::symbol::Ident;
 use rustc_span::Span;
 use std::sync::Arc;
-use vir::ast::{FunctionAttrsX, FunctionX, KrateX, Mode, ParamX, Typ, TypX, VirErr};
+use vir::ast::{FunctionAttrsX, FunctionX, KrateX, Mode, FunX, ParamX, Typ, TypX, VirErr};
 use vir::def::RETURN_VALUE;
 
 pub(crate) fn body_to_vir<'tcx>(
@@ -92,6 +92,7 @@ pub(crate) fn check_item_fn<'tcx>(
     visibility: vir::ast::Visibility,
     attrs: &[Attribute],
     sig: &'tcx FnSig<'tcx>,
+    trait_path: Option<vir::ast::Path>,
     self_generics: Option<&'tcx Generics>,
     generics: &'tcx Generics,
     body_id: &BodyId,
@@ -103,6 +104,10 @@ pub(crate) fn check_item_fn<'tcx>(
     } else {
         def_id_to_vir_path(ctxt.tcx, id)
     };
+    let name = Arc::new(FunX {
+        path,
+        trait_path,
+    });
     let mode = get_mode(Mode::Exec, attrs);
     let self_typ_params =
         if let Some(cg) = self_generics { Some(check_generics(ctxt.tcx, cg)?) } else { None };
@@ -128,7 +133,7 @@ pub(crate) fn check_item_fn<'tcx>(
     let vattrs = get_verifier_attrs(attrs)?;
     if vattrs.external {
         let mut erasure_info = ctxt.erasure_info.borrow_mut();
-        erasure_info.external_functions.push(path);
+        erasure_info.external_functions.push(name);
         return Ok(());
     }
     let body = &ctxt.krate.bodies[body_id];
@@ -224,7 +229,7 @@ pub(crate) fn check_item_fn<'tcx>(
         export_as_global_forall: vattrs.export_as_global_forall,
     };
     let func = FunctionX {
-        path,
+        name,
         visibility,
         mode,
         fuel,
@@ -267,6 +272,10 @@ pub(crate) fn check_foreign_item_fn<'tcx>(
         vir_params.push(vir_param);
     }
     let path = def_id_to_vir_path(ctxt.tcx, id);
+    let name = Arc::new(FunX {
+        path,
+        trait_path: None, // TODO SOUNDNESS can foreign_item_fns impl a trait?
+    });
     let params = Arc::new(vir_params);
     let (ret_typ, ret_mode) = match ret_typ_mode {
         None => (Arc::new(TypX::Tuple(Arc::new(vec![]))), mode),
@@ -276,7 +285,7 @@ pub(crate) fn check_foreign_item_fn<'tcx>(
         ParamX { name: Arc::new(RETURN_VALUE.to_string()), typ: ret_typ, mode: ret_mode };
     let ret = spanned_new(span, ret_param);
     let func = FunctionX {
-        path,
+        name,
         visibility,
         fuel,
         mode,

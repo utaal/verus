@@ -116,7 +116,7 @@ fn check_expr(typing: &mut Typing, outer_mode: Mode, expr: &Expr) -> Result<Mode
         ExprX::Call(CallTarget::Static(x, _), es) => {
             let function = match typing.funs.get(x) {
                 None => {
-                    let name = crate::ast_util::path_as_rust_name(x);
+                    let name = crate::ast_util::path_as_rust_name(&x.path);
                     return err_string(&expr.span, format!("cannot find function {}", name));
                 }
                 Some(f) => f.clone(),
@@ -361,10 +361,10 @@ fn check_function(typing: &mut Typing, function: &Function) -> Result<(), VirErr
 }
 
 pub fn check_crate(krate: &Krate) -> Result<ErasureModes, VirErr> {
-    let mut funs: HashMap<Path, Function> = HashMap::new();
+    let mut funs: HashMap<Fun, Function> = HashMap::new();
     let mut datatypes: HashMap<Path, Datatype> = HashMap::new();
     for function in krate.functions.iter() {
-        funs.insert(function.x.path.clone(), function.clone());
+        funs.insert(function.x.name.clone(), function.clone());
     }
     for datatype in krate.datatypes.iter() {
         datatypes.insert(datatype.x.path.clone(), datatype.clone());

@@ -127,12 +127,19 @@ pub fn fun_to_string(fun: &Fun) -> String {
     }
 }
 
-pub fn check_decrease_int() -> Path {
-    Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(CHECK_DECREASE_INT)]) })
+pub fn check_decrease_int() -> Fun {
+    Arc::new(FunX {
+        path: Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(CHECK_DECREASE_INT)]) }),
+        trait_path: None,
+    })
 }
 
-pub fn height() -> Path {
-    Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(HEIGHT)]) })
+pub fn height() -> Fun {
+    Arc::new(FunX {
+        path: Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(HEIGHT)]) }),
+        trait_path: None,
+    })
+
 }
 
 pub fn suffix_global_id(ident: &Ident) -> Ident {
@@ -251,7 +258,7 @@ fn prefix_path(prefix: String, path: &Path) -> Path {
     Arc::new(pathx)
 }
 
-pub fn prefix_recursive(path: &Path) -> Path {
+fn prefix_recursive(path: &Path) -> Path {
     prefix_path(PREFIX_RECURSIVE.to_string(), path)
 }
 

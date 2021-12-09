@@ -156,7 +156,7 @@ pub(crate) fn exp_to_expr(ctx: &Ctx, exp: &Exp) -> Expr {
         ExpX::Var(x) => string_var(&suffix_local_unique_id(x)),
         ExpX::Old(span, x) => Arc::new(ExprX::Old(span.clone(), suffix_local_stmt_id(x))),
         ExpX::Call(x, typs, args) => {
-            let name = suffix_global_id(&path_to_air_ident(&x));
+            let name = suffix_global_id(&fun_to_air_ident(&x));
             let mut exprs: Vec<Expr> = vec_map(typs, typ_to_id);
             for arg in args.iter() {
                 exprs.push(exp_to_expr(ctx, arg));
@@ -402,7 +402,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut stmts: Vec<Stmt> = Vec::new();
             let func = &ctx.func_map[x];
             if func.x.require.len() > 0 {
-                let f_req = prefix_requires(&path_to_air_ident(&func.x.path));
+                let f_req = prefix_requires(&fun_to_air_ident(&func.x.name));
                 let mut req_args = vec_map(typs, typ_to_id);
                 for arg in args.iter() {
                     req_args.push(exp_to_expr(ctx, arg));
@@ -460,8 +460,8 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     }
                 }
             }
-            if ctx.funcs_with_ensure_predicate.contains(&func.x.path) {
-                let f_ens = prefix_ensures(&path_to_air_ident(&func.x.path));
+            if ctx.funcs_with_ensure_predicate.contains(&func.x.name) {
+                let f_ens = prefix_ensures(&fun_to_air_ident(&func.x.name));
                 let e_ens = Arc::new(ExprX::Apply(f_ens, Arc::new(ens_args)));
                 stmts.push(Arc::new(StmtX::Assume(e_ens)));
             }
@@ -634,7 +634,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut stmts: Vec<Stmt> = Vec::new();
             if *fuel >= 1 {
                 // (assume (fuel_bool fuel%f))
-                let id_fuel = prefix_fuel_id(&path_to_air_ident(&x));
+                let id_fuel = prefix_fuel_id(&fun_to_air_ident(&x));
                 let expr_fuel_bool = str_apply(&FUEL_BOOL, &vec![ident_var(&id_fuel)]);
                 stmts.push(Arc::new(StmtX::Assume(expr_fuel_bool)));
             }
@@ -645,7 +645,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     added_fuel = str_apply(SUCC, &vec![added_fuel]);
                 }
                 let eq = mk_eq(
-                    &ident_var(&crate::def::prefix_fuel_nat(&path_to_air_ident(&x))),
+                    &ident_var(&crate::def::prefix_fuel_nat(&fun_to_air_ident(&x))),
                     &added_fuel,
                 );
                 let binder = ident_binder(&str_ident(FUEL_PARAM), &str_typ(FUEL_TYPE));
