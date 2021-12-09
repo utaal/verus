@@ -1146,7 +1146,12 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                     Arc::make_mut(&mut Arc::make_mut(&mut tp).segments).push(str_ident("index"));
                     tp
                 };
-                let trait_def_id = bctx.ctxt.tcx.lang_items().index_trait().expect("Index trait lang item should be defined");
+                let trait_def_id = bctx
+                    .ctxt
+                    .tcx
+                    .lang_items()
+                    .index_trait()
+                    .expect("Index trait lang item should be defined");
                 let trait_path = def_id_to_vir_path(bctx.ctxt.tcx, trait_def_id);
                 let idx_vir = expr_to_vir(bctx, idx_expr)?;
                 let target = CallTarget::Static(

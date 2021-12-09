@@ -6,9 +6,7 @@ use crate::def::{
     FUEL_BOOL_DEFAULT, FUEL_LOCAL, FUEL_TYPE, SUCC, ZERO,
 };
 use crate::sst::{BndX, ExpX};
-use crate::sst_to_air::{
-    exp_to_expr, fun_to_air_ident, typ_invariant, typ_to_air,
-};
+use crate::sst_to_air::{exp_to_expr, fun_to_air_ident, typ_invariant, typ_to_air};
 use crate::util::{vec_map, vec_map_result};
 use air::ast::{
     BinaryOp, Bind, BindX, Binder, BinderX, Command, CommandX, Commands, DeclX, Expr, ExprX,

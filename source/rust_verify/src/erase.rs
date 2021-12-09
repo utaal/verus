@@ -53,8 +53,7 @@ use rustc_ast::ast::{
     AngleBracketedArg, AngleBracketedArgs, Arm, AssocItem, AssocItemKind, Block, Crate, EnumDef,
     Expr, ExprKind, Field, FieldPat, FnDecl, FnKind, FnRetTy, FnSig, GenericArgs, GenericParam,
     Generics, ImplKind, Item, ItemKind, Lit, LitIntType, LitKind, Local, ModKind, NodeId, Param,
-    Pat, PatKind, PathSegment, Stmt, StmtKind, StructField, StructRest, Variant,
-    VariantData,
+    Pat, PatKind, PathSegment, Stmt, StmtKind, StructField, StructRest, Variant, VariantData,
 };
 use rustc_ast::ptr::P;
 use rustc_data_structures::thin_vec::ThinVec;

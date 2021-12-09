@@ -112,7 +112,9 @@ pub(crate) fn check_item_fn<'tcx>(
                 sig.span,
                 format!(
                     "{} has mode {}, which must not be lower than the function's mode {} for trait impls",
-                    vir::ast_util::path_as_rust_name(&self_path), adt_mode, mode
+                    vir::ast_util::path_as_rust_name(&self_path),
+                    adt_mode,
+                    mode
                 ),
             );
         }
@@ -168,7 +170,11 @@ pub(crate) fn check_item_fn<'tcx>(
                     Arc::new(TypX::TypParam(t.clone()))
                 });
             Arc::new(TypX::Datatype(
-                self_path_mode.as_ref().map(|(self_path, _)| self_path).expect("a param is Self, so this must be an impl").clone(),
+                self_path_mode
+                    .as_ref()
+                    .map(|(self_path, _)| self_path)
+                    .expect("a param is Self, so this must be an impl")
+                    .clone(),
                 Arc::new(typ_args),
             ))
         } else {

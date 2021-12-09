@@ -8,9 +8,7 @@ For soundness's sake, be as defensive as possible:
 
 use crate::context::Context;
 use crate::rust_to_vir_adts::{check_item_enum, check_item_struct};
-use crate::rust_to_vir_base::{
-    def_id_to_vir_path, hack_get_def_name, mk_visibility, get_mode,
-};
+use crate::rust_to_vir_base::{def_id_to_vir_path, get_mode, hack_get_def_name, mk_visibility};
 use crate::rust_to_vir_func::{check_foreign_item_fn, check_item_fn};
 use crate::util::unsupported_err_span;
 use crate::{err_unless, unsupported_err, unsupported_err_unless, unsupported_unless};
@@ -22,7 +20,7 @@ use rustc_hir::{
 use rustc_middle::ty::TyCtxt;
 use std::collections::HashMap;
 use std::sync::Arc;
-use vir::ast::{Krate, KrateX, Path, VirErr, Mode};
+use vir::ast::{Krate, KrateX, Mode, Path, VirErr};
 use vir::ast_util::path_as_rust_name;
 
 fn check_item<'tcx>(
@@ -146,8 +144,13 @@ fn check_item<'tcx>(
                     });
                     let adt_mode = {
                         let attrs = ctxt.tcx.hir().attrs(
-                            ctxt.tcx.hir().get_if_local(*self_def_id).expect("non-local def id of fun").hir_id()
-                            .expect("adt must have hir_id"));
+                            ctxt.tcx
+                                .hir()
+                                .get_if_local(*self_def_id)
+                                .expect("non-local def id of fun")
+                                .hir_id()
+                                .expect("adt must have hir_id"),
+                        );
                         get_mode(Mode::Exec, attrs)
                     };
                     for impl_item_ref in impll.items {

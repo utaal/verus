@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryOp, CallTarget, Constant, Expr, ExprX, Fun, Function, Ident, Mode, Params,
-    PatternX, SpannedTyped, Stmt, StmtX, Typ, TypX, Typs, UnaryOp, UnaryOpr, VirErr,
+    BinaryOp, CallTarget, Constant, Expr, ExprX, Fun, Function, Ident, Mode, Params, PatternX,
+    SpannedTyped, Stmt, StmtX, Typ, TypX, Typs, UnaryOp, UnaryOpr, VirErr,
 };
 use crate::ast_util::{err_str, err_string};
 use crate::context::Ctx;
