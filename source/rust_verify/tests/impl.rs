@@ -208,6 +208,36 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
+    #[test] test_ops_trait_impl_by_name code! {
+        use std::ops::Index;
+
+        #[derive(PartialEq, Eq)] #[spec]
+        struct V {
+            pub one: nat,
+        }
+
+        impl std::ops::Index<int> for V {
+            type Output = nat;
+
+            #[spec]
+            fn index(&self, idx: int) -> &nat {
+                if idx == 0 {
+                    &self.one
+                } else {
+                    arbitrary()
+                }
+            }
+        }
+
+        fn test(v: V) {
+            requires(*v.index(0) == 3);
+
+            assert(*v.index(0) + 1 == 4);
+        }
+    } => Ok(())
+}
+
+test_verify_one_file! {
     #[test] test_illegal_trait_impl code! {
         #[derive(PartialEq, Eq)]
         struct V {

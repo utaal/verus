@@ -1103,11 +1103,25 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                 TypX::Datatype(path, _) => path.clone(),
                 _ => panic!("unexpected receiver type"),
             };
-            let fn_def_id = bctx
-                .types
-                .type_dependent_def_id(expr.hir_id)
-                .expect("def id of the method definition");
-            eprintln!("{:?} {:?}", _name_and_generics, fn_def_id);
+            let fn_def_id = {
+                let fn_def_id = bctx
+                    .types
+                    .type_dependent_def_id(expr.hir_id)
+                    .expect("def id of the method definition");
+
+                if let Some(trait_) = bctx.ctxt.tcx.trait_of_item(fn_def_id) {
+                    eprintln!("## {:?}\n- {:?}\n- {:?}\n- {:?}\n- {:?}\n- {:?}", bctx.types.node_type(receiver.hir_id), bctx.types.expr_ty(expr), fn_def_id, &receiver, trait_, bctx.ctxt.tcx.trait_impls_of(trait_));
+                    let relevant_impl: Option<()> = bctx.ctxt.tcx.find_map_relevant_impl(trait_, bctx.types.node_type(receiver.hir_id), |impl_id| {
+                        eprintln!("? {:?}", impl_id);
+                        eprintln!("? {:?}", bctx.ctxt.tcx.hir().get_if_local(impl_id));
+
+                        None
+                    });
+                    todo!()
+                } else {
+                    fn_def_id
+                }
+            };
             match tcx.hir().get_if_local(fn_def_id).expect("fn def for method in hir") {
                 rustc_hir::Node::ImplItem(rustc_hir::ImplItem {
                     kind: rustc_hir::ImplItemKind::Fn(..),
