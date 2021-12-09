@@ -177,7 +177,7 @@ pub enum HeaderExprX {
     Decreases(Expr),
     /// Make a function f opaque (definition hidden) within the current function body.
     /// (The current function body can later reveal f in specific parts of the current function body if desired.)
-    Hide(Path),
+    Hide(Fun),
 }
 
 /// Primitive constant values
@@ -335,7 +335,7 @@ pub type FunctionAttrs = Arc<FunctionAttrsX>;
 #[derive(Debug, Default, Clone)]
 pub struct FunctionAttrsX {
     /// List of functions that this function wants to view as opaque
-    pub hidden: Arc<Vec<Path>>,
+    pub hidden: Arc<Vec<Fun>>,
     /// Create a global axiom saying forall params, require ==> ensure
     pub export_as_global_forall: bool,
     /// In triggers_auto, don't use this function as a trigger

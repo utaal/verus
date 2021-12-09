@@ -171,9 +171,8 @@ fn check_item<'tcx>(
                                 }
                             },
                             AssocItemKind::Type => {
-                                let impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
-                                // dbg!(impl_item);
-                                // TODO SOUNDNESS
+                                let _impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
+                                // the type system handles this for Trait impls
                             },
                             _ => unsupported_err!(
                                 item.span,

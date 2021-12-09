@@ -670,7 +670,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
     }
 }
 
-fn set_fuel(local: &mut Vec<Decl>, hidden: &Vec<Path>) {
+fn set_fuel(local: &mut Vec<Decl>, hidden: &Vec<Fun>) {
     let fuel_expr = if hidden.len() == 0 {
         str_var(&FUEL_DEFAULTS)
     } else {
@@ -686,7 +686,7 @@ fn set_fuel(local: &mut Vec<Decl>, hidden: &Vec<Path>) {
 
         // ... || id == hidden1 || id == hidden2 || ...
         for hide in hidden {
-            let x_hide = ident_var(&prefix_fuel_id(&path_to_air_ident(hide)));
+            let x_hide = ident_var(&prefix_fuel_id(&fun_to_air_ident(hide)));
             disjuncts.push(Arc::new(ExprX::Binary(air::ast::BinaryOp::Eq, x_id.clone(), x_hide)));
         }
 
@@ -706,7 +706,7 @@ pub fn body_stm_to_air(
     typ_params: &Idents,
     params: &Params,
     local_decls: &Vec<LocalDecl>,
-    hidden: &Vec<Path>,
+    hidden: &Vec<Fun>,
     reqs: &Vec<Exp>,
     enss: &Vec<Exp>,
     stm: &Stm,
