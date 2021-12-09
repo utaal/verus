@@ -1,5 +1,5 @@
 use crate::ast::{
-    CallTarget, Datatype, Expr, ExprX, Function, Krate, Mode, Fun, Path, UnaryOpr, VirErr,
+    CallTarget, Datatype, Expr, ExprX, Fun, Function, Krate, Mode, Path, UnaryOpr, VirErr,
 };
 use crate::ast_util::{err_str, err_string};
 use crate::ast_visitor::map_expr_visitor;

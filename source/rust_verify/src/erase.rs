@@ -68,7 +68,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use vir::ast::{
-    Datatype, ExprX, Function, GenericBoundX, Krate, Mode, Fun, Path, Pattern, PatternX, UnaryOpr,
+    Datatype, ExprX, Fun, Function, GenericBoundX, Krate, Mode, Path, Pattern, PatternX, UnaryOpr,
 };
 use vir::ast_util::get_field;
 use vir::modes::{mode_join, ErasureModes};
@@ -830,13 +830,11 @@ fn erase_assoc_item(ctxt: &Ctxt, mctxt: &mut MCtxt, item: &AssocItem) -> Option<
                 Some(_) => {
                     let erased = erase_fn(ctxt, mctxt, f);
                     erased.map(|f| update_item(item, AssocItemKind::Fn(Box::new(f))))
-                },
+                }
                 None => Some(item.clone()),
             }
-        },
-        AssocItemKind::TyAlias(_) => {
-            Some(item.clone())
-        },
+        }
+        AssocItemKind::TyAlias(_) => Some(item.clone()),
         _ => panic!("unsupported AssocItemKind"),
     }
 }

@@ -8,7 +8,9 @@ For soundness's sake, be as defensive as possible:
 
 use crate::context::Context;
 use crate::rust_to_vir_adts::{check_item_enum, check_item_struct};
-use crate::rust_to_vir_base::{def_id_to_vir_path, def_path_to_vir_path, hack_get_def_name, mk_visibility};
+use crate::rust_to_vir_base::{
+    def_id_to_vir_path, def_path_to_vir_path, hack_get_def_name, mk_visibility,
+};
 use crate::rust_to_vir_func::{check_foreign_item_fn, check_item_fn};
 use crate::util::unsupported_err_span;
 use crate::{err_unless, unsupported_err, unsupported_err_unless, unsupported_unless};
@@ -123,10 +125,11 @@ fn check_item<'tcx>(
                     );
                     return Ok(());
                 } else if path_name == "core::marker::StructuralEq"
-                        || path_name == "core::cmp::Eq"
-                        || path_name == "core::marker::StructuralPartialEq"
-                        || path_name == "core::cmp::PartialEq"
-                        || path_name == "builtin::Structural" {
+                    || path_name == "core::cmp::Eq"
+                    || path_name == "core::marker::StructuralPartialEq"
+                    || path_name == "core::cmp::PartialEq"
+                    || path_name == "builtin::Structural"
+                {
                     // TODO SOUNDNESS additional checks of the implementation
                     return Ok(());
                 }
@@ -137,8 +140,9 @@ fn check_item<'tcx>(
                     None,
                     rustc_hir::Path { res: rustc_hir::def::Res::Def(_, self_def_id), .. },
                 )) => {
-                    let trait_path = impll.of_trait.as_ref().map(|TraitRef { path, .. }| 
-                        def_id_to_vir_path(ctxt.tcx, path.res.def_id()));
+                    let trait_path = impll.of_trait.as_ref().map(|TraitRef { path, .. }| {
+                        def_id_to_vir_path(ctxt.tcx, path.res.def_id())
+                    });
                     for impl_item_ref in impll.items {
                         match impl_item_ref.kind {
                             AssocItemKind::Fn { has_self } if has_self => {
@@ -147,8 +151,7 @@ fn check_item<'tcx>(
                                     mk_visibility(&Some(module_path.clone()), &impl_item.vis);
                                 match &impl_item.kind {
                                     ImplItemKind::Fn(sig, body_id) => {
-                                        let self_path =
-                                            def_id_to_vir_path(ctxt.tcx, *self_def_id);
+                                        let self_path = def_id_to_vir_path(ctxt.tcx, *self_def_id);
                                         check_item_fn(
                                             ctxt,
                                             vir,
@@ -169,11 +172,11 @@ fn check_item<'tcx>(
                                         impl_item_ref
                                     ),
                                 }
-                            },
+                            }
                             AssocItemKind::Type => {
                                 let _impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
                                 // the type system handles this for Trait impls
-                            },
+                            }
                             _ => unsupported_err!(
                                 item.span,
                                 "unsupported item ref in impl",

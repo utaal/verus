@@ -12,7 +12,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::symbol::Ident;
 use rustc_span::Span;
 use std::sync::Arc;
-use vir::ast::{FunctionAttrsX, FunctionX, KrateX, Mode, FunX, ParamX, Typ, TypX, VirErr};
+use vir::ast::{FunX, FunctionAttrsX, FunctionX, KrateX, Mode, ParamX, Typ, TypX, VirErr};
 use vir::def::RETURN_VALUE;
 
 pub(crate) fn body_to_vir<'tcx>(
@@ -104,10 +104,7 @@ pub(crate) fn check_item_fn<'tcx>(
     } else {
         def_id_to_vir_path(ctxt.tcx, id)
     };
-    let name = Arc::new(FunX {
-        path,
-        trait_path,
-    });
+    let name = Arc::new(FunX { path, trait_path });
     let mode = get_mode(Mode::Exec, attrs);
     let self_typ_params =
         if let Some(cg) = self_generics { Some(check_generics(ctxt.tcx, cg)?) } else { None };

@@ -3,8 +3,8 @@
 /// 2) Also remove any export_as_global_forall from any modules that are unreachable
 ///    from this module.  This could, in principle, result in incompleteness.
 use crate::ast::{
-    CallTarget, Datatype, Expr, ExprX, Function, Ident, Krate, KrateX, Mode, Fun, Path, Stmt, Typ, TypX,
-    Visibility,
+    CallTarget, Datatype, Expr, ExprX, Fun, Function, Ident, Krate, KrateX, Mode, Path, Stmt, Typ,
+    TypX, Visibility,
 };
 use crate::ast_util::is_visible_to;
 use crate::ast_visitor::map_expr_visitor;
@@ -30,7 +30,11 @@ struct State {
     worklist_modules: Vec<Path>,
 }
 
-fn reach<A: std::hash::Hash+std::cmp::Eq+Clone>(reached: &mut HashSet<A>, worklist: &mut Vec<A>, id: &A) {
+fn reach<A: std::hash::Hash + std::cmp::Eq + Clone>(
+    reached: &mut HashSet<A>,
+    worklist: &mut Vec<A>,
+    id: &A,
+) {
     if !reached.contains(id) {
         reached.insert(id.clone());
         worklist.push(id.clone());
@@ -66,7 +70,9 @@ fn traverse_reachable(ctxt: &Ctxt, state: &mut State) {
             let function = &ctxt.function_map[&f];
             let fe = |state: &mut State, _: &mut ScopeMap<Ident, Typ>, e: &Expr| {
                 match &e.x {
-                    ExprX::Call(CallTarget::Static(name, _), _) => reach_function(ctxt, state, name),
+                    ExprX::Call(CallTarget::Static(name, _), _) => {
+                        reach_function(ctxt, state, name)
+                    }
                     ExprX::Ctor(path, _, _, _) => reach_datatype(ctxt, state, path),
                     _ => {}
                 }

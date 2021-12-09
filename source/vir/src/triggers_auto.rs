@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Constant, Ident, Fun, Path, Typ, TypX, UnaryOp, UnaryOpr, VirErr};
+use crate::ast::{BinaryOp, Constant, Fun, Ident, Path, Typ, TypX, UnaryOp, UnaryOpr, VirErr};
 use crate::ast_util::{err_str, path_as_rust_name};
 use crate::context::Ctx;
 use crate::sst::{Exp, ExpX, Trig, Trigs, UniqueIdent};

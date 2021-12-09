@@ -1,10 +1,10 @@
 use crate::ast::{
-    Datatype, Function, GenericBound, IntRange, Fun, Krate, Mode, Path, TypX, Variants, VirErr,
+    Datatype, Fun, Function, GenericBound, IntRange, Krate, Mode, Path, TypX, Variants, VirErr,
 };
 use crate::datatype_to_air::is_datatype_transparent;
 use crate::def::FUEL_ID;
 use crate::scc::Graph;
-use crate::sst_to_air::{path_to_air_ident, fun_to_air_ident};
+use crate::sst_to_air::{fun_to_air_ident, path_to_air_ident};
 use crate::util::vec_map;
 use air::ast::{Command, CommandX, Commands, DeclX, MultiOp, Span};
 use air::ast_util::str_typ;

@@ -1,4 +1,4 @@
-use crate::ast::{Path, PathX, Fun, FunX};
+use crate::ast::{Fun, FunX, Path, PathX};
 use crate::sst::UniqueIdent;
 use air::ast::{Ident, Span};
 use air::ast_util::str_ident;
@@ -129,7 +129,10 @@ pub fn fun_to_string(fun: &Fun) -> String {
 
 pub fn check_decrease_int() -> Fun {
     Arc::new(FunX {
-        path: Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(CHECK_DECREASE_INT)]) }),
+        path: Arc::new(PathX {
+            krate: None,
+            segments: Arc::new(vec![str_ident(CHECK_DECREASE_INT)]),
+        }),
         trait_path: None,
     })
 }
@@ -139,7 +142,6 @@ pub fn height() -> Fun {
         path: Arc::new(PathX { krate: None, segments: Arc::new(vec![str_ident(HEIGHT)]) }),
         trait_path: None,
     })
-
 }
 
 pub fn suffix_global_id(ident: &Ident) -> Ident {

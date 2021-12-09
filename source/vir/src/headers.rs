@@ -1,4 +1,4 @@
-use crate::ast::{Expr, ExprX, Exprs, HeaderExprX, Ident, Fun, Path, Stmt, StmtX, Typ, VirErr};
+use crate::ast::{Expr, ExprX, Exprs, Fun, HeaderExprX, Ident, Path, Stmt, StmtX, Typ, VirErr};
 use crate::ast_util::err_str;
 use std::sync::Arc;
 

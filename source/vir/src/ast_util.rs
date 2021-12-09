@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryOp, Constant, DatatypeX, Expr, ExprX, FunctionX, Ident, Idents, Mode, Param, Params,
-    Fun, FunX, Path, PathX, SpannedTyped, Typ, TypX, Variant, Variants, VirErr, VirErrX, Visibility,
+    BinaryOp, Constant, DatatypeX, Expr, ExprX, Fun, FunX, FunctionX, Ident, Idents, Mode, Param,
+    Params, Path, PathX, SpannedTyped, Typ, TypX, Variant, Variants, VirErr, VirErrX, Visibility,
 };
 use crate::def::Spanned;
 use crate::util::vec_map;

@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryOp, CallTarget, Constant, Function, Ident, IntRange, Params, Fun, Typ, TypX, UnaryOp,
+    BinaryOp, CallTarget, Constant, Fun, Function, Ident, IntRange, Params, Typ, TypX, UnaryOp,
     UnaryOpr, VirErr,
 };
 use crate::ast_util::err_str;
