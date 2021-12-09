@@ -9,7 +9,7 @@ For soundness's sake, be as defensive as possible:
 use crate::context::Context;
 use crate::rust_to_vir_adts::{check_item_enum, check_item_struct};
 use crate::rust_to_vir_base::{
-    def_id_to_vir_path, def_path_to_vir_path, hack_get_def_name, mk_visibility,
+    def_id_to_vir_path, hack_get_def_name, mk_visibility,
 };
 use crate::rust_to_vir_func::{check_foreign_item_fn, check_item_fn};
 use crate::util::unsupported_err_span;

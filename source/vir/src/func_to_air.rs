@@ -7,7 +7,7 @@ use crate::def::{
 };
 use crate::sst::{BndX, ExpX};
 use crate::sst_to_air::{
-    exp_to_expr, fun_to_air_ident, path_to_air_ident, typ_invariant, typ_to_air,
+    exp_to_expr, fun_to_air_ident, typ_invariant, typ_to_air,
 };
 use crate::util::{vec_map, vec_map_result};
 use air::ast::{

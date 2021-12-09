@@ -15,7 +15,7 @@ use std::io::Write;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use vir::ast::{Krate, VirErr, VirErrX, Visibility};
-use vir::ast_util::{fun_as_rust_dbg, is_visible_to, path_as_rust_name};
+use vir::ast_util::{fun_as_rust_dbg, is_visible_to};
 use vir::def::SnapPos;
 
 pub struct Verifier {
