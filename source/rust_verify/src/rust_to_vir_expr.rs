@@ -1107,6 +1107,7 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                 .types
                 .type_dependent_def_id(expr.hir_id)
                 .expect("def id of the method definition");
+            eprintln!("{:?} {:?}", _name_and_generics, fn_def_id);
             match tcx.hir().get_if_local(fn_def_id).expect("fn def for method in hir") {
                 rustc_hir::Node::ImplItem(rustc_hir::ImplItem {
                     kind: rustc_hir::ImplItemKind::Fn(..),
