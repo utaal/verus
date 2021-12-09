@@ -1140,25 +1140,17 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
         }
         ExprKind::Index(tgt_expr, idx_expr) => {
             let tgt_vir = expr_to_vir(bctx, tgt_expr)?;
-            if let TypX::Datatype(path, dt_typs) = &*tgt_vir.typ {
+            if let TypX::Datatype(path, _dt_typs) = &*tgt_vir.typ {
                 let tgt_index_path = {
                     let mut tp = path.clone();
-                    // TODO move string
                     Arc::make_mut(&mut Arc::make_mut(&mut tp).segments).push(str_ident("index"));
                     tp
                 };
-                // TODO extract def
-                let trait_path = Some(Arc::new(vir::ast::PathX {
-                    krate: Some(str_ident("core")),
-                    segments: Arc::new(vec![
-                        str_ident("ops"),
-                        str_ident("index"),
-                        str_ident("Index"),
-                    ]),
-                }));
+                let trait_def_id = bctx.ctxt.tcx.lang_items().index_trait().expect("Index trait lang item should be defined");
+                let trait_path = def_id_to_vir_path(bctx.ctxt.tcx, trait_def_id);
                 let idx_vir = expr_to_vir(bctx, idx_expr)?;
                 let target = CallTarget::Static(
-                    Arc::new(FunX { path: tgt_index_path, trait_path }),
+                    Arc::new(FunX { path: tgt_index_path, trait_path: Some(trait_path) }),
                     Arc::new(vec![]),
                 );
                 Ok(mk_expr(ExprX::Call(target, Arc::new(vec![tgt_vir, idx_vir]))))

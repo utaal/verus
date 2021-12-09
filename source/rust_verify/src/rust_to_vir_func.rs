@@ -87,7 +87,7 @@ fn check_fn_decl<'tcx>(
 pub(crate) fn check_item_fn<'tcx>(
     ctxt: &Context<'tcx>,
     vir: &mut KrateX,
-    self_path: Option<vir::ast::Path>,
+    self_path_mode: Option<(vir::ast::Path, Mode)>,
     id: rustc_span::def_id::DefId,
     visibility: vir::ast::Visibility,
     attrs: &[Attribute],
@@ -97,7 +97,7 @@ pub(crate) fn check_item_fn<'tcx>(
     generics: &'tcx Generics,
     body_id: &BodyId,
 ) -> Result<(), VirErr> {
-    let path = if let Some(self_path) = &self_path {
+    let path = if let Some((self_path, _)) = &self_path_mode {
         let mut full_path = (**self_path).clone();
         Arc::make_mut(&mut full_path.segments).push(def_to_path_ident(ctxt.tcx, id));
         Arc::new(full_path)
@@ -106,6 +106,17 @@ pub(crate) fn check_item_fn<'tcx>(
     };
     let name = Arc::new(FunX { path, trait_path });
     let mode = get_mode(Mode::Exec, attrs);
+    if let (Some(_), Some((self_path, adt_mode))) = (&name.trait_path, &self_path_mode) {
+        if !vir::modes::mode_le(mode, *adt_mode) {
+            return err_span_string(
+                sig.span,
+                format!(
+                    "{} has mode {}, which must not be lower than the function's mode {} for trait impls",
+                    vir::ast_util::path_as_rust_name(&self_path), adt_mode, mode
+                ),
+            );
+        }
+    }
     let self_typ_params =
         if let Some(cg) = self_generics { Some(check_generics(ctxt.tcx, cg)?) } else { None };
     let ret_typ_mode = match sig {
@@ -119,7 +130,7 @@ pub(crate) fn check_item_fn<'tcx>(
                 ctxt.tcx,
                 &sig.span,
                 decl,
-                self_path.clone(),
+                self_path_mode.as_ref().map(|(self_path, _)| self_path.clone()),
                 self_typ_params.clone(),
                 mode,
             )?
@@ -157,7 +168,7 @@ pub(crate) fn check_item_fn<'tcx>(
                     Arc::new(TypX::TypParam(t.clone()))
                 });
             Arc::new(TypX::Datatype(
-                self_path.as_ref().expect("a param is Self, so this must be an impl").clone(),
+                self_path_mode.as_ref().map(|(self_path, _)| self_path).expect("a param is Self, so this must be an impl").clone(),
                 Arc::new(typ_args),
             ))
         } else {

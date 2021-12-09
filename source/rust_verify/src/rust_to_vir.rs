@@ -9,7 +9,7 @@ For soundness's sake, be as defensive as possible:
 use crate::context::Context;
 use crate::rust_to_vir_adts::{check_item_enum, check_item_struct};
 use crate::rust_to_vir_base::{
-    def_id_to_vir_path, hack_get_def_name, mk_visibility,
+    def_id_to_vir_path, hack_get_def_name, mk_visibility, get_mode,
 };
 use crate::rust_to_vir_func::{check_foreign_item_fn, check_item_fn};
 use crate::util::unsupported_err_span;
@@ -22,7 +22,7 @@ use rustc_hir::{
 use rustc_middle::ty::TyCtxt;
 use std::collections::HashMap;
 use std::sync::Arc;
-use vir::ast::{Krate, KrateX, Path, VirErr};
+use vir::ast::{Krate, KrateX, Path, VirErr, Mode};
 use vir::ast_util::path_as_rust_name;
 
 fn check_item<'tcx>(
@@ -140,9 +140,16 @@ fn check_item<'tcx>(
                     None,
                     rustc_hir::Path { res: rustc_hir::def::Res::Def(_, self_def_id), .. },
                 )) => {
+                    let self_path = def_id_to_vir_path(ctxt.tcx, *self_def_id);
                     let trait_path = impll.of_trait.as_ref().map(|TraitRef { path, .. }| {
                         def_id_to_vir_path(ctxt.tcx, path.res.def_id())
                     });
+                    let adt_mode = {
+                        let attrs = ctxt.tcx.hir().attrs(
+                            ctxt.tcx.hir().get_if_local(*self_def_id).expect("non-local def id of fun").hir_id()
+                            .expect("adt must have hir_id"));
+                        get_mode(Mode::Exec, attrs)
+                    };
                     for impl_item_ref in impll.items {
                         match impl_item_ref.kind {
                             AssocItemKind::Fn { has_self } if has_self => {
@@ -151,11 +158,10 @@ fn check_item<'tcx>(
                                     mk_visibility(&Some(module_path.clone()), &impl_item.vis);
                                 match &impl_item.kind {
                                     ImplItemKind::Fn(sig, body_id) => {
-                                        let self_path = def_id_to_vir_path(ctxt.tcx, *self_def_id);
                                         check_item_fn(
                                             ctxt,
                                             vir,
-                                            Some(self_path),
+                                            Some((self_path.clone(), adt_mode)),
                                             impl_item.def_id.to_def_id(),
                                             impl_item_visibility,
                                             ctxt.tcx.hir().attrs(impl_item.hir_id()),
@@ -275,7 +281,7 @@ pub fn crate_to_vir<'tcx>(ctxt: &Context<'tcx>) -> Result<Krate, VirErr> {
         impl_items,
         foreign_items,
         bodies: _,
-        trait_impls,
+        trait_impls: _,
         body_ids: _,
         modules,
         proc_macros,
@@ -310,31 +316,20 @@ pub fn crate_to_vir<'tcx>(ctxt: &Context<'tcx>) -> Result<Krate, VirErr> {
                     || impl_item_ident == "ne"
                     || impl_item_ident == "assert_receiver_is_structural"
                 {
-                    // TODO: check whether these implement the correct trait if
+                    // TODO: check whether these implement the correct trait
                 }
             }
-            ImplItemKind::TyAlias(ty) => {
-                // dbg!(ty); // TODO nocheckin
-                // unsupported_err!(impl_item.span, "unsupported_ty_alias", impl_item);
+            ImplItemKind::TyAlias(_ty) => {
+                // checked by the type system
             }
             _ => {
                 unsupported_err!(impl_item.span, "unsupported_impl_item", impl_item);
             }
         }
     }
-    for (id, trait_impl) in trait_impls {
-
-        // let id_name = path_as_rust_name(&def_id_to_vir_path(ctxt.tcx, *id));
-        // unsupported_unless!(
-        //     id_name == "core::marker::StructuralEq"
-        //         || id_name == "core::cmp::Eq"
-        //         || id_name == "core::marker::StructuralPartialEq"
-        //         || id_name == "core::cmp::PartialEq"
-        //         || id_name == "builtin::Structural",
-        //     "non_eq_trait_impl",
-        //     id
-        // );
-    }
+    // for (id, _trait_impl) in trait_impls {
+    //
+    // }
     unsupported_unless!(proc_macros.len() == 0, "procedural macros", proc_macros);
     // unsupported_unless!(trait_map.iter().all(|(_, v)| v.len() == 0), "traits", trait_map);
     for (id, attr) in attrs {
