@@ -275,11 +275,13 @@ fn fn_call_to_vir<'tcx>(
     let is_cmp = is_equal || is_eq || is_ne || is_le || is_ge || is_lt || is_gt;
     let is_arith_binary = is_add || is_sub || is_mul;
 
-    dbg!(fun_ty);
+    unsupported_err_unless!(
+        bctx.ctxt.tcx.impl_of_method(f).and_then(|method_def_id| bctx.ctxt.tcx.trait_id_of_impl(method_def_id)).is_none(), expr.span, "call of trait impl");
     let name = Arc::new(FunX {
         path,
-        trait_path: todo!(),
+        trait_path: None,
     });
+
     record_fun(
         &bctx.ctxt,
         fn_span,
@@ -1136,9 +1138,13 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                     Arc::make_mut(&mut Arc::make_mut(&mut tp).segments).push(str_ident("index"));
                     tp
                 };
-                let tgt_index_trait_path = todo!();
+                // TODO extract def
+                let trait_path = Some(Arc::new(vir::ast::PathX {
+                    krate: Some(str_ident("core")),
+                    segments: Arc::new(vec![str_ident("ops"), str_ident("index"), str_ident("Index")]),
+                }));
                 let idx_vir = expr_to_vir(bctx, idx_expr)?;
-                let target = CallTarget::Static(Arc::new(FunX { path: tgt_index_path, trait_path: tgt_index_trait_path }), Arc::new(vec![]));
+                let target = CallTarget::Static(Arc::new(FunX { path: tgt_index_path, trait_path }), Arc::new(vec![]));
                 Ok(mk_expr(ExprX::Call(target, Arc::new(vec![tgt_vir, idx_vir]))))
             } else {
                 unsupported_err!(expr.span, format!("Index on non-datatype"), expr)

@@ -8,7 +8,7 @@ For soundness's sake, be as defensive as possible:
 
 use crate::context::Context;
 use crate::rust_to_vir_adts::{check_item_enum, check_item_struct};
-use crate::rust_to_vir_base::{def_id_to_vir_path, hack_get_def_name, mk_visibility};
+use crate::rust_to_vir_base::{def_id_to_vir_path, def_path_to_vir_path, hack_get_def_name, mk_visibility};
 use crate::rust_to_vir_func::{check_foreign_item_fn, check_item_fn};
 use crate::util::unsupported_err_span;
 use crate::{err_unless, unsupported_err, unsupported_err_unless, unsupported_unless};
@@ -137,6 +137,8 @@ fn check_item<'tcx>(
                     None,
                     rustc_hir::Path { res: rustc_hir::def::Res::Def(_, self_def_id), .. },
                 )) => {
+                    let trait_path = impll.of_trait.as_ref().map(|TraitRef { path, .. }| 
+                        def_id_to_vir_path(ctxt.tcx, path.res.def_id()));
                     for impl_item_ref in impll.items {
                         match impl_item_ref.kind {
                             AssocItemKind::Fn { has_self } if has_self => {
@@ -155,7 +157,7 @@ fn check_item<'tcx>(
                                             impl_item_visibility,
                                             ctxt.tcx.hir().attrs(impl_item.hir_id()),
                                             sig,
-                                            todo!(),
+                                            trait_path.clone(),
                                             Some(&impll.generics),
                                             &impl_item.generics,
                                             body_id,
@@ -170,7 +172,7 @@ fn check_item<'tcx>(
                             },
                             AssocItemKind::Type => {
                                 let impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
-                                dbg!(impl_item);
+                                // dbg!(impl_item);
                                 // TODO SOUNDNESS
                             },
                             _ => unsupported_err!(
@@ -310,7 +312,7 @@ pub fn crate_to_vir<'tcx>(ctxt: &Context<'tcx>) -> Result<Krate, VirErr> {
                 }
             }
             ImplItemKind::TyAlias(ty) => {
-                dbg!(ty); // TODO nocheckin
+                // dbg!(ty); // TODO nocheckin
                 // unsupported_err!(impl_item.span, "unsupported_ty_alias", impl_item);
             }
             _ => {
