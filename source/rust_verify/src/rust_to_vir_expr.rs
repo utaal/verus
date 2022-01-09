@@ -361,7 +361,10 @@ fn fn_call_to_vir<'tcx>(
                 return err_span_str(arg.span, "requires needs a bool expression");
             }
         }
-        let vir_args = vec_map_result(&args, |arg| expr_to_vir(&bctx, arg, ExprModifier::Regular))?;
+        let vir_args = vec_map_result(&args, |arg| {
+            /* TODO remove */ dbg!(arg);
+            expr_to_vir(&bctx, arg, ExprModifier::Regular)
+        })?;
         let header = Arc::new(HeaderExprX::Requires(Arc::new(vir_args)));
         return Ok(mk_expr(ExprX::Header(header)));
     }

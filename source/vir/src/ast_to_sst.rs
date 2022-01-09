@@ -366,9 +366,6 @@ pub(crate) fn expr_to_stm_opt(
             let unique_id = state.get_var_unique_id(&x);
             Ok((vec![], Some(mk_exp(ExpX::Var(unique_id)))))
         }
-        ExprX::VarAt(x, VarAt::Pre) => {
-            Ok((vec![], Some(mk_exp(ExpX::VarAt(x.clone(), VarAt::Pre)))))
-        }
         ExprX::Assign(expr1, expr2) => {
             let dest_x = match &expr1.x {
                 ExprX::Var(x) => Ok(state.get_var_unique_id(&x)),

@@ -106,3 +106,26 @@ test_verify_one_file! {
         }
     } => Err(e) => assert_vir_error(e)
 }
+
+// test_verify_one_file! {
+//     #[test] test_mut_ref_arg_self code! {
+//         pub struct Value {
+//             v: u64,
+//         }
+// 
+//         impl Value {
+//             pub fn add1(&mut self) {
+//                 requires(old(self.v) < 10);
+//                 ensures(self.v == old(self.v) + 1);
+//                 let Value { v } = *self;
+//                 *self = Value { v: v + 1 };
+//             }
+//         }
+// 
+//         fn caller() {
+//             let mut v = Value { v: 2 };
+//             v.add1();
+//             assert(v.v == 3);
+//         }
+//     } => Ok(())
+// }
