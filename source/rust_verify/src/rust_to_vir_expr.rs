@@ -362,7 +362,7 @@ fn fn_call_to_vir<'tcx>(
             }
         }
         let vir_args = vec_map_result(&args, |arg| {
-            /* TODO remove */ dbg!(arg);
+            // /* TODO remove */ dbg!(arg);
             expr_to_vir(&bctx, arg, ExprModifier::Regular)
         })?;
         let header = Arc::new(HeaderExprX::Requires(Arc::new(vir_args)));
@@ -819,7 +819,20 @@ pub(crate) fn pattern_to_vir<'tcx>(
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum ExprModifier {
     Regular,
-    DerefMut,
+    MutRef,
+}
+
+fn is_expr_typ_mut_ref<'tcx>(
+    bctx: &BodyCtxt<'tcx>,
+    expr: &Expr<'tcx>,
+    _modifier: ExprModifier,
+) -> Result<ExprModifier, VirErr> {
+    match bctx.types.node_type(expr.hir_id).kind() {
+        TyKind::Ref(_, _tys, rustc_ast::Mutability::Not) => Ok(ExprModifier::Regular),
+        TyKind::Ref(_, _tys, rustc_ast::Mutability::Mut) => Ok(ExprModifier::MutRef),
+        TyKind::Adt(_, _) => Ok(ExprModifier::Regular),
+        _ => unsupported_err!(expr.span, "dereferencing this type is unsupported", expr),
+    }
 }
 
 pub(crate) fn expr_to_vir_inner<'tcx>(
@@ -845,7 +858,7 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
     let tc = bctx.types;
     let expr_typ = || match modifier {
         ExprModifier::Regular => typ_of_node(bctx, &expr.hir_id),
-        ExprModifier::DerefMut => typ_of_node_expect_mut_ref(bctx, &expr.hir_id),
+        ExprModifier::MutRef => typ_of_node_expect_mut_ref(bctx, &expr.hir_id),
     };
     let mk_expr = move |x: ExprX| spanned_typed_new(expr.span, &expr_typ(), x);
 
@@ -970,15 +983,7 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
                 let varg = expr_to_vir(bctx, arg, modifier)?;
                 Ok(mk_expr(ExprX::Binary(BinaryOp::Sub, zero, varg)))
             }
-            UnOp::Deref => match bctx.types.node_type(arg.hir_id).kind() {
-                TyKind::Ref(_, _tys, rustc_ast::Mutability::Not) => {
-                    expr_to_vir_inner(bctx, arg, ExprModifier::Regular)
-                }
-                TyKind::Ref(_, _tys, rustc_ast::Mutability::Mut) => {
-                    expr_to_vir_inner(bctx, arg, ExprModifier::DerefMut)
-                }
-                _ => unsupported_err!(expr.span, "dereferencing this type is unsupported", expr),
-            },
+            UnOp::Deref => expr_to_vir_inner(bctx, arg, is_expr_typ_mut_ref(bctx, arg, modifier)?),
         },
         ExprKind::Binary(op, lhs, rhs) => {
             let vlhs = expr_to_vir(bctx, lhs, modifier)?;
@@ -1082,10 +1087,11 @@ pub(crate) fn expr_to_vir_inner<'tcx>(
             expr_to_vir(bctx, rhs, modifier)?,
         ))),
         ExprKind::Field(lhs, name) => {
-            let vir_lhs = expr_to_vir(bctx, lhs, modifier)?;
+            let lhs_modifier = is_expr_typ_mut_ref(bctx, lhs, modifier)?;
+            let vir_lhs = expr_to_vir(bctx, lhs, lhs_modifier)?;
             let lhs_ty = tc.node_type(lhs.hir_id);
             let lhs_ty = match lhs_ty.kind() {
-                TyKind::Ref(_, lt, Mutability::Not) => lt,
+                TyKind::Ref(_, lt, Mutability::Not | Mutability::Mut) => lt,
                 _ => lhs_ty,
             };
             let (datatype, variant_name, field_name, unbox) = if let Some(adt_def) =
