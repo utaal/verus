@@ -18,7 +18,7 @@ pub struct PCell<V> {
 }
 
 #[proof]
-#[verifier(unforgeable)]
+// #[verifier(unforgeable)]
 pub struct Permission<V> {
   #[spec] pub pcell: int,
   #[spec] pub value: option::Option<V>,
@@ -70,35 +70,39 @@ impl<V> PCell<V> {
 
   #[inline(always)]
   #[verifier(returns(proof))]
-  pub fn put(&self, v: V, #[proof] perm: Permission<V>) -> Permission<V> {
+  pub fn put(&self, v: V, #[proof] perm: &mut Permission<V>) {
     requires([
-        equal(self.view(), perm.pcell),
-        equal(perm.value, option::Option::None),
+        equal(self.view(), old(perm).pcell),
+        equal(old(perm).value, option::Option::None),
     ]);
-    ensures(|p: Permission<V>|
-        equal(p.value, option::Option::Some(v))
-    );
+    ensures(equal(perm.value, option::Option::Some(v)));
 
     self.put_external(v);
 
-    perm
+    #[proof] let Permission { pcell, value } = *perm;
+    *perm = Permission::<V> { pcell, value: option::Option::Some(v) };
   }
 
-  /*
+  //// Get
+
   #[inline(always)]
-  #[verifier(no_verify)]
-  pub fn borrow(&self, perm: &'a Permission<V>) -> &'a V {
-    requires([
-        equal(self.view(), perm.view().pcell),
-        !equal(perm.view().value, None),
-    ]);
-    ensures(|p: Permission<V>|
-        equal(p.view().value, Some(v))
-    );
-    
-    self.write_external(v);
-
-    return perm;
+  #[verifier(external_body)]
+  fn get_external(&self) -> &V {
+    ensures(|v: V| false);
+    unsafe {
+      unimplemented!()
+    }
   }
-  */
+
+  #[inline(always)]
+  #[verifier(returns(exec))]
+  pub fn borrow<'a>(&'a self, perm: &'a Permission<V>) -> &'a V {
+    requires([
+        equal(self.view(), perm.pcell),
+        !equal(perm.value, option::Option::None),
+    ]);
+    ensures(|v: V| equal(perm.value, option::Option::Some(v)));
+    
+    self.get_external()
+  }
 }
