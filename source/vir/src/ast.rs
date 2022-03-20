@@ -109,7 +109,7 @@ pub enum UnaryOp {
     Clip(IntRange),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FieldOpr {
     pub datatype: Path,
     pub variant: Ident,

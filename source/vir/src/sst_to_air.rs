@@ -774,6 +774,17 @@ fn loc_to_field_path(loc: &Exp) -> (UniqueIdent, Vec<FieldOpr>) {
     }
 }
 
+fn snapshotted_var_locs(arg: &Exp) -> Exp {
+    crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
+        ExpX::VarLoc(x) => SpannedTyped::new(
+            &e.span,
+            &e.typ,
+            ExpX::Old(snapshot_ident(SNAPSHOT_CALL), x.clone()),
+        ),
+        _ => e.clone(),
+    })
+}
+
 fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
     let expr_ctxt = ExprCtxt::Body;
     match &stm.x {
@@ -825,31 +836,53 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     call_snapshot = true;
                     let (base_var, fields) = loc_to_field_path(arg);
                     mutated_fields.entry(base_var).or_insert(Vec::new()).push(fields);
-                    let arg_old = crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
-                        ExpX::VarLoc(x) => SpannedTyped::new(
-                            &e.span,
-                            &e.typ,
-                            ExpX::Old(snapshot_ident(SNAPSHOT_CALL), x.clone()),
-                        ),
-                        _ => e.clone(),
-                    });
+                    let arg_old = snapshotted_var_locs(arg);
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_old, expr_ctxt));
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_x, expr_ctxt));
                 } else {
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_x, expr_ctxt))
                 };
             }
-            let havocs = mutated_fields
+            let mut_stmts: Vec<_> = mutated_fields
                 .keys()
                 .map(|base| Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))))
+                .chain(mutated_fields.iter().flat_map(|(base, updates)| {
+                    match &updates[..] {
+                        [f] if f.len() == 0 => vec![].into_iter(),
+                        _ => {
+                            let mut updated_fields: BTreeMap<_, Vec<_>> = BTreeMap::new();
+                            let FieldOpr { datatype, variant, field: _ } = &updates[0][0];
+                            for u in updates {
+                                assert!(u[0].datatype == *datatype && u[0].variant == *variant);
+                                updated_fields.entry(&u[0].field).or_insert(Vec::new()).push(u[1..].to_vec());
+                            }
+                            let datatype_fields = &get_variant(&ctx.global.datatypes[datatype], variant).a;
+                            datatype_fields.iter().flat_map(|field| {
+                                if let Some(updated_field) = updated_fields.get(&field.name) {
+                                    vec![].into_iter()
+                                } else {
+                                    let field_exp = SpannedTyped::new(
+                                        &stm.span,
+                                        &field.a.0,
+                                        todo!()
+                                    );
+                                    let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp), expr_ctxt);
+                                    let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
+                                    vec![Arc::new(StmtX::Assume(Arc::new(ExprX::Binary(air::ast::BinaryOp::Eq, old, new))))].into_iter()
+                                }
+                            }).collect::<Vec<_>>().into_iter()
+                        }
+                    }
+                    // let FieldOpr { datatype, variant, field: _ } = &fields[0];
+                    // let ret: Vec<_> = todo!();
+                    // ret.into_iter()
+                }))
                 .collect::<Vec<_>>();
-            todo!();
-
             if call_snapshot {
                 stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_CALL))));
-                stmts.extend(havocs.into_iter());
+                stmts.extend(mut_stmts.into_iter());
             } else {
-                assert_eq!(havocs.len(), 0);
+                assert_eq!(mut_stmts.len(), 0);
                 if ctx.debug {
                     state.map_span(&stm, SpanKind::Full);
                 }
