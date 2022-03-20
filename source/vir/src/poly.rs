@@ -70,9 +70,9 @@ Therefore, the expression Unbox(Box(1)) explicitly introduces a superfluous Unbo
 */
 
 use crate::ast::{
-    BinaryOp, CallTarget, Datatype, DatatypeX, Expr, ExprX, Exprs, Function, FunctionKind,
-    FunctionX, Ident, IntRange, Krate, KrateX, MaskSpec, Mode, Param, ParamX, Path, PatternX,
-    SpannedTyped, Stmt, StmtX, Typ, TypX, UnaryOp, UnaryOpr,
+    BinaryOp, CallTarget, Datatype, DatatypeX, Expr, ExprX, Exprs, FieldOpr, Function,
+    FunctionKind, FunctionX, Ident, IntRange, Krate, KrateX, MaskSpec, Mode, Param, ParamX, Path,
+    PatternX, SpannedTyped, Stmt, StmtX, Typ, TypX, UnaryOp, UnaryOpr,
 };
 use crate::context::Ctx;
 use crate::def::Spanned;
@@ -311,7 +311,7 @@ fn poly_expr(ctx: &Ctx, state: &mut State, expr: &Expr) -> Expr {
                     let e1 = coerce_expr_to_native(ctx, &e1);
                     mk_expr(ExprX::UnaryOpr(op.clone(), e1))
                 }
-                UnaryOpr::Field { datatype, variant, field } => {
+                UnaryOpr::Field(FieldOpr { datatype, variant, field }) => {
                     let fields = &ctx.datatype_map[datatype].x.get_variant(variant).a;
                     let field = crate::ast_util::get_field(fields, field);
 

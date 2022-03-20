@@ -314,3 +314,32 @@ test_verify_one_file! {
         }
     } => Ok(())
 }
+
+test_verify_one_file! {
+    #[test] test_mut_ref_field_pass_1 code! {
+        #[derive(PartialEq, Eq, Structural)]
+        struct S {
+            a: u32,
+            b: i32,
+        }
+
+        fn add1(a: &mut u32, b: &mut i32) {
+            requires([
+                *old(a) < 10,
+                *old(b) < 10,
+            ]);
+            ensures([
+                *a == *old(a) + 1,
+                *b == *old(b) + 1,
+            ]);
+            *a = *a + 1;
+            *b = *b + 1;
+        }
+
+        fn main() {
+            let mut s = S { a: 5, b: -5 };
+            add1(&mut s.a, &mut s.b);
+            assert(s == S { a: 6, b: -4 });
+        }
+    } => Ok(())
+}

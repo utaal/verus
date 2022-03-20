@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryOp, Fun, Ident, Idents, IntRange, InvAtomicity, MaskSpec, Mode, Params, Path, PathX,
-    SpannedTyped, Typ, TypX, Typs, UnaryOp, UnaryOpr, VarAt,
+    BinaryOp, FieldOpr, Fun, Ident, Idents, IntRange, InvAtomicity, MaskSpec, Mode, Params, Path,
+    PathX, SpannedTyped, Typ, TypX, Typs, UnaryOp, UnaryOpr, VarAt,
 };
 use crate::ast_util::{bitwidth_from_type, get_field, get_variant};
 use crate::context::Ctx;
@@ -28,7 +28,7 @@ use air::ast_util::{
     str_ident, str_typ, str_var, string_var,
 };
 use air::errors::{error, error_with_label};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem::swap;
 use std::sync::Arc;
 
@@ -396,7 +396,7 @@ pub(crate) fn exp_to_expr(ctx: &Ctx, exp: &Exp, expr_ctxt: ExprCtxt) -> Expr {
             UnaryOpr::TupleField { .. } => {
                 panic!("internal error: TupleField should have been removed before here")
             }
-            UnaryOpr::Field { datatype, variant, field } => {
+            UnaryOpr::Field(FieldOpr { datatype, variant, field }) => {
                 let expr = exp_to_expr(ctx, exp, expr_ctxt);
                 Arc::new(ExprX::Apply(
                     variant_field_ident(datatype, variant, field),
@@ -749,6 +749,31 @@ fn exp_to_bv_expr(state: &State, exp: &Exp) -> Expr {
     }
 }
 
+// TODO pub struct FieldUpdateOpr {
+// TODO     datatype: Datatype,
+// TODO     variant: Variant,
+// TODO     field: Field,
+// TODO }
+
+// T { a: u64, s: S { b: i64, c: i64 }
+// t.s | t.a
+// t.s.b | t.a, t.s.c
+fn loc_to_field_path(loc: &Exp) -> (UniqueIdent, Vec<FieldOpr>) {
+    let mut e: &Exp = loc;
+    let mut fields = Vec::new();
+    loop {
+        match &e.x {
+            ExpX::Loc(ee) => e = ee,
+            ExpX::VarLoc(x) => return (x.clone() /* e.typ.clone() */, fields),
+            ExpX::UnaryOpr(UnaryOpr::Field(field), ee) => {
+                fields.push(field.clone());
+                e = ee;
+            }
+            _ => panic!("loc unexpected {:?}", loc),
+        }
+    }
+}
+
 fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
     let expr_ctxt = ExprCtxt::Body;
     match &stm.x {
@@ -779,7 +804,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             }
             let mut call_snapshot = false;
             let mut ens_args_wo_typ = Vec::new();
-            let mut havocs = Vec::new();
+            let mut mutated_fields: BTreeMap<_, Vec<_>> = BTreeMap::new();
             for (param, arg) in func.x.params.iter().zip(args.iter()) {
                 let arg_x = if let Some(Dest { var, .. }) = dest {
                     crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
@@ -798,16 +823,14 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 };
                 if param.x.is_mut {
                     call_snapshot = true;
+                    let (base_var, fields) = loc_to_field_path(arg);
+                    mutated_fields.entry(base_var).or_insert(Vec::new()).push(fields);
                     let arg_old = crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
-                        ExpX::VarLoc(x) => {
-                            let havoc = StmtX::Havoc(suffix_local_unique_id(&x));
-                            havocs.push(Arc::new(havoc));
-                            SpannedTyped::new(
-                                &e.span,
-                                &e.typ,
-                                ExpX::Old(snapshot_ident(SNAPSHOT_CALL), x.clone()),
-                            )
-                        }
+                        ExpX::VarLoc(x) => SpannedTyped::new(
+                            &e.span,
+                            &e.typ,
+                            ExpX::Old(snapshot_ident(SNAPSHOT_CALL), x.clone()),
+                        ),
                         _ => e.clone(),
                     });
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_old, expr_ctxt));
@@ -816,6 +839,12 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_x, expr_ctxt))
                 };
             }
+            let havocs = mutated_fields
+                .keys()
+                .map(|base| Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))))
+                .collect::<Vec<_>>();
+            todo!();
+
             if call_snapshot {
                 stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_CALL))));
                 stmts.extend(havocs.into_iter());
