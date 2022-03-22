@@ -837,7 +837,6 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     arg.clone()
                 };
                 if param.x.is_mut {
-                    dbg!(&arg, &arg_x);
                     call_snapshot = true;
                     let (base_var, LocFieldInfo { base_typ, base_span, a: fields }) =
                         loc_to_field_path(arg);

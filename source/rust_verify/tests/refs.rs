@@ -366,6 +366,8 @@ test_verify_one_file! {
         fn main() {
             let mut s = S { a: 5, b: false };
             add1(&mut s.a);
+            assert(s.a == 6);
+            assert(s.b == false);
             assert(s == S { a: 6, b: false });
         }
     } => Ok(())
