@@ -321,6 +321,7 @@ test_verify_one_file! {
         struct S {
             a: u32,
             b: i32,
+            c: bool,
         }
 
         fn add1(a: &mut u32, b: &mut i32) {
@@ -337,9 +338,35 @@ test_verify_one_file! {
         }
 
         fn main() {
-            let mut s = S { a: 5, b: -5 };
+            let mut s = S { a: 5, b: -5, c: false };
             add1(&mut s.a, &mut s.b);
-            assert(s == S { a: 6, b: -4 });
+            assert(s == S { a: 6, b: -4, c: false });
+        }
+    } => Ok(())
+}
+
+test_verify_one_file! {
+    #[test] test_mut_ref_field_pass_2 code! {
+        #[derive(PartialEq, Eq, Structural)]
+        struct S<A> {
+            a: A,
+            b: bool,
+        }
+
+        fn add1(a: &mut u32) {
+            requires([
+                *old(a) < 10,
+            ]);
+            ensures([
+                *a == *old(a) + 1,
+            ]);
+            *a = *a + 1;
+        }
+
+        fn main() {
+            let mut s = S { a: 5, b: false };
+            add1(&mut s.a);
+            assert(s == S { a: 6, b: false });
         }
     } => Ok(())
 }
