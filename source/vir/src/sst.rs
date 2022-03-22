@@ -72,12 +72,14 @@ pub struct ParX {
 
 #[derive(Clone, Debug)]
 pub struct Dest {
-    pub var: UniqueIdent,
+    pub dest: Exp,
     pub is_init: bool,
 }
 
 pub type Stm = Arc<Spanned<StmX>>;
 pub type Stms = Arc<Vec<Stm>>;
+
+
 #[derive(Debug)]
 pub enum StmX {
     // call to exec/proof function
@@ -87,9 +89,8 @@ pub enum StmX {
     AssertBV(Exp),
     Assume(Exp),
     Assign {
-        lhs: UniqueIdent,
+        lhs: Dest,
         rhs: Exp,
-        is_init: bool,
     },
     Fuel(Fun, u32),
     DeadEnd(Stm),

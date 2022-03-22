@@ -144,7 +144,7 @@ impl State {
 
 fn init_var(span: &Span, x: &UniqueIdent, exp: &Exp) -> Stm {
     let lhs = x.clone();
-    Spanned::new(span.clone(), StmX::Assign { lhs, rhs: exp.clone(), is_init: true })
+    Spanned::new(span.clone(), StmX::Assign { lhs: Dest { dest: SpannedTyped::new(&exp.span, &exp.typ, ExpX::VarLoc(lhs)), is_init: true }, rhs: exp.clone() })
 }
 
 fn get_function(ctx: &Ctx, expr: &Expr, name: &Fun) -> Result<Function, VirErr> {
@@ -389,23 +389,25 @@ pub(crate) fn expr_to_stm_opt(
             let (stms, e0) = expr_to_stm(ctx, state, expr1)?;
             Ok((stms, Some(mk_exp(ExpX::Loc(e0)))))
         }
-        ExprX::Assign { init_not_mut, lhs: expr1, rhs: expr2 } => {
-            let dest_x = match &expr1.x {
-                ExprX::VarLoc(x) => state.get_var_unique_id(&x),
-                _ => panic!("complex Assign should have been simplified"),
-            };
+        ExprX::Assign { init_not_mut, lhs: lhs_expr, rhs: expr2 } => {
+            let (mut stms, lhs_exp) = expr_to_stm(ctx, state, lhs_expr)?;
             match expr_must_be_call_stm(ctx, state, expr2)? {
                 Some((mut stms2, func_path, typs, _, args)) => {
                     // make a Call
-                    let dest = Dest { var: dest_x.clone(), is_init: *init_not_mut };
-                    stms2.push(stm_call(state, &expr.span, func_path, typs, args, Some(dest)));
+                    let dest = Dest { dest: lhs_exp, is_init: *init_not_mut };
+                    stms.extend(stms2.into_iter());
+                    stms.push(stm_call(state, &expr.span, func_path, typs, args, Some(dest)));
                     Ok((stms2, None))
                 }
                 None => {
                     // make an Assign
                     let (mut stms2, e2) = expr_to_stm(ctx, state, expr2)?;
-                    let assign = StmX::Assign { lhs: dest_x, rhs: e2, is_init: *init_not_mut };
-                    stms2.push(Spanned::new(expr.span.clone(), assign));
+                    let assign = StmX::Assign { lhs: Dest {
+                        dest: lhs_exp,
+                        is_init: *init_not_mut,
+                    }, rhs: e2 };
+                    stms.extend(stms2.into_iter());
+                    stms.push(Spanned::new(expr.span.clone(), assign));
                     Ok((stms2, None))
                 }
             }
