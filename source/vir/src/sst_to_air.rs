@@ -913,9 +913,6 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                                     .into_iter()
                             }
                         }
-                        // let FieldOpr { datatype, variant, field: _ } = &fields[0];
-                        // let ret: Vec<_> = todo!();
-                        // ret.into_iter()
                     },
                 ))
                 .collect::<Vec<_>>();

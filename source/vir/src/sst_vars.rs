@@ -1,6 +1,6 @@
-use crate::ast::Typ;
+use crate::ast::{Typ, UnaryOpr};
 use crate::def::Spanned;
-use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest, Exp};
+use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest, Exp, ExpX};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -20,7 +20,12 @@ pub type AssignMap = HashMap<*const Spanned<StmX>, HashSet<Arc<String>>>;
 pub(crate) fn get_loc_var(
     exp: &Exp,
 ) -> UniqueIdent {
-    todo!()
+    match &exp.x {
+        ExpX::Loc(x) => get_loc_var(x),
+        ExpX::UnaryOpr(UnaryOpr::Field { .. }, x) => get_loc_var(x),
+        ExpX::VarLoc(x) => x.clone(),
+        _ => panic!("lhs {:?} unsupported", exp),
+    }
 }
 
 pub(crate) fn stm_assign(
@@ -32,7 +37,7 @@ pub(crate) fn stm_assign(
 ) -> Stm {
     let result = match &stm.x {
         StmX::Call(_, _, _, Some(dest)) => {
-            let var: UniqueIdent = todo!();
+            let var: UniqueIdent = get_loc_var(&dest.dest);
             assigned.insert(var.clone());
             if !dest.is_init {
                 modified.insert(var.clone());
