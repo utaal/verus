@@ -928,10 +928,10 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut ens_args: Vec<_> =
                 typ_args.into_iter().chain(ens_args_wo_typ.into_iter()).collect();
             if let Some(Dest { dest, is_init }) = dest {
-                let x = suffix_local_unique_id(todo!());
-                ens_args.push(Arc::new(ExprX::Var(x.clone())));
+                let var = suffix_local_unique_id(&get_loc_var(dest));
+                ens_args.push(exp_to_expr(ctx, &dest, expr_ctxt));
                 if !*is_init {
-                    let havoc = StmtX::Havoc(x.clone());
+                    let havoc = StmtX::Havoc(var.clone());
                     stmts.push(Arc::new(havoc));
                 }
                 if ctx.debug {
