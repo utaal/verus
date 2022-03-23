@@ -1,6 +1,6 @@
 use crate::ast::Typ;
 use crate::def::Spanned;
-use crate::sst::{Stm, StmX, Stms, UniqueIdent};
+use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -37,7 +37,7 @@ pub(crate) fn stm_assign(
         | StmX::AssertBV(..)
         | StmX::Assume(_)
         | StmX::Fuel(..) => stm.clone(),
-        StmX::Assign { lhs, rhs: _, is_init } => {
+        StmX::Assign { lhs: Dest { var: lhs, dest, is_init }, rhs: _ } => {
             assigned.insert(lhs.clone());
             if !is_init {
                 modified.insert(lhs.clone());

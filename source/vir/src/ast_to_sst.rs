@@ -142,9 +142,12 @@ impl State {
     }
 }
 
+pub(crate) fn var_loc_exp(span: &Span, typ: &Typ, lhs: UniqueIdent) -> Exp {
+    SpannedTyped::new(span, typ, ExpX::VarLoc(lhs))
+}
+
 fn init_var(span: &Span, x: &UniqueIdent, exp: &Exp) -> Stm {
-    let lhs = x.clone();
-    Spanned::new(span.clone(), StmX::Assign { lhs: Dest { dest: SpannedTyped::new(&exp.span, &exp.typ, ExpX::VarLoc(lhs)), is_init: true }, rhs: exp.clone() })
+    Spanned::new(span.clone(), StmX::Assign { lhs: Dest { var: x.clone(), dest: var_loc_exp(&exp.span, &exp.typ, x.clone()), is_init: true }, rhs: exp.clone() })
 }
 
 fn get_function(ctx: &Ctx, expr: &Expr, name: &Fun) -> Result<Function, VirErr> {
@@ -394,7 +397,7 @@ pub(crate) fn expr_to_stm_opt(
             match expr_must_be_call_stm(ctx, state, expr2)? {
                 Some((mut stms2, func_path, typs, _, args)) => {
                     // make a Call
-                    let dest = Dest { dest: lhs_exp, is_init: *init_not_mut };
+                    let dest = Dest { var: todo!(), dest: lhs_exp, is_init: *init_not_mut };
                     stms.extend(stms2.into_iter());
                     stms.push(stm_call(state, &expr.span, func_path, typs, args, Some(dest)));
                     Ok((stms2, None))
@@ -403,6 +406,7 @@ pub(crate) fn expr_to_stm_opt(
                     // make an Assign
                     let (mut stms2, e2) = expr_to_stm(ctx, state, expr2)?;
                     let assign = StmX::Assign { lhs: Dest {
+                        var: todo!(),
                         dest: lhs_exp,
                         is_init: *init_not_mut,
                     }, rhs: e2 };
@@ -429,7 +433,8 @@ pub(crate) fn expr_to_stm_opt(
                 let (temp, temp_var) = state.next_temp(&expr.span, &expr.typ);
                 state.declare_new_var(&temp, &expr.typ, false, false);
                 // tmp = StmX::Call;
-                let dest = Dest { var: (temp.clone(), Some(0)), is_init: true };
+                let uniq_ident = (temp.clone(), Some(0));
+                let dest = Dest { var: uniq_ident.clone(), dest: var_loc_exp(&expr.span, &expr.typ, uniq_ident), is_init: true };
                 stms.push(stm_call(state, &expr.span, x.clone(), typs.clone(), args, Some(dest)));
                 // tmp
                 Ok((stms, Some(temp_var)))
@@ -837,13 +842,13 @@ pub(crate) fn stmt_to_stm(
 
             let ident = state.alloc_unique_var(&name);
             let typ = pattern.typ.clone();
-            let decl = Arc::new(LocalDeclX { ident, typ, mutable: *mutable });
+            let decl = Arc::new(LocalDeclX { ident, typ: typ.clone(), mutable: *mutable });
 
             if let Some(init) = init {
                 match expr_must_be_call_stm(ctx, state, init)? {
                     Some((mut stms, func_name, typs, _, args)) => {
                         // Special case: convert to a Call
-                        let dest = Dest { var: decl.ident.clone(), is_init: true };
+                        let dest = Dest { var: decl.ident.clone(), dest: var_loc_exp(&pattern.span, &typ, decl.ident.clone()), is_init: true };
                         stms.push(stm_call(state, &init.span, func_name, typs, args, Some(dest)));
                         return Ok((stms, None, Some((decl, None))));
                     }

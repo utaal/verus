@@ -72,6 +72,7 @@ pub struct ParX {
 
 #[derive(Clone, Debug)]
 pub struct Dest {
+    pub var: UniqueIdent,
     pub dest: Exp,
     pub is_init: bool,
 }
