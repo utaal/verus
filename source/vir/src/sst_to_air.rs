@@ -16,7 +16,7 @@ use crate::def::{
 use crate::inv_masks::MaskSet;
 use crate::poly::{typ_as_mono, MonoTyp, MonoTypX};
 use crate::sst::{BndX, Dest, Exp, ExpX, LocalDecl, Stm, StmX, UniqueIdent};
-use crate::sst_vars::AssignMap;
+use crate::sst_vars::{AssignMap, get_loc_var};
 use crate::util::vec_map;
 use air::ast::{
     BindX, Binder, BinderX, Binders, Command, CommandX, Commands, Constant, Decl, DeclX, Expr,
@@ -822,7 +822,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut mutated_fields: BTreeMap<_, LocFieldInfo<Vec<_>>> = BTreeMap::new();
             for (param, arg) in func.x.params.iter().zip(args.iter()) {
                 let arg_x = if let Some(Dest { dest, is_init }) = dest {
-                    let var: UniqueIdent = todo!();
+                    let var: UniqueIdent = get_loc_var(dest);
                     crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
                         ExpX::Var(x) if *x == var => {
                             call_snapshot = true;
