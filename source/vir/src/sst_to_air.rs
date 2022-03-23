@@ -786,6 +786,7 @@ fn snapshotted_var_locs(arg: &Exp) -> Exp {
     })
 }
 
+// TODO way too many Vec allocs
 fn assume_other_fields_unchanged(ctx: &Ctx, state: &mut State, stm_span: &Span, base: &UniqueIdent, mutated_fields: &LocFieldInfo<Vec<Vec<FieldOpr>>>, expr_ctxt: ExprCtxt) -> Vec<Stmt> {
     let LocFieldInfo { base_typ, base_span, a: updates } = mutated_fields;
     match &updates[..] {
