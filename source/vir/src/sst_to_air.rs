@@ -821,9 +821,10 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut ens_args_wo_typ = Vec::new();
             let mut mutated_fields: BTreeMap<_, LocFieldInfo<Vec<_>>> = BTreeMap::new();
             for (param, arg) in func.x.params.iter().zip(args.iter()) {
-                let arg_x = if let Some(Dest { var, .. }) = dest {
+                let arg_x = if let Some(Dest { dest, is_init }) = dest {
+                    let var: UniqueIdent = todo!();
                     crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
-                        ExpX::Var(x) if x == var => {
+                        ExpX::Var(x) if *x == var => {
                             call_snapshot = true;
                             SpannedTyped::new(
                                 &e.span,
@@ -929,7 +930,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             }
             let mut ens_args: Vec<_> =
                 typ_args.into_iter().chain(ens_args_wo_typ.into_iter()).collect();
-            if let Some(Dest { var: _, dest, is_init }) = dest {
+            if let Some(Dest { dest, is_init }) = dest {
                 let x = suffix_local_unique_id(todo!());
                 ens_args.push(Arc::new(ExprX::Var(x.clone())));
                 if !*is_init {
@@ -989,10 +990,10 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             }
             vec![Arc::new(StmtX::Assume(exp_to_expr(ctx, &expr, expr_ctxt)))]
         }
-        StmX::Assign { lhs: Dest { var: _, dest, is_init: true }, rhs } => {
+        StmX::Assign { lhs: Dest { dest, is_init: true }, rhs } => {
             stm_to_stmts(ctx, state, &assume_var(&stm.span, /* lhs */ todo!(), rhs))
         }
-        StmX::Assign { lhs: Dest { var: _, dest, is_init: false }, rhs } => {
+        StmX::Assign { lhs: Dest { dest, is_init: false }, rhs } => {
             let mut stmts: Vec<Stmt> = Vec::new();
             let name = suffix_local_unique_id(/* lhs */ todo!());
             stmts.push(Arc::new(StmtX::Assign(name, exp_to_expr(ctx, rhs, expr_ctxt))));

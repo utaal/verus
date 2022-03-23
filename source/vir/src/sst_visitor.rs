@@ -454,10 +454,10 @@ where
             StmX::Assert(span2, exp) => Spanned::new(span, StmX::Assert(span2.clone(), f(exp))),
             StmX::AssertBV(exp) => Spanned::new(span, StmX::AssertBV(f(exp))),
             StmX::Assume(exp) => Spanned::new(span, StmX::Assume(f(exp))),
-            StmX::Assign { lhs: Dest { dest, is_init, var }, rhs } => {
+            StmX::Assign { lhs: Dest { dest, is_init }, rhs } => {
                 let dest = f(dest);
                 let rhs = f(rhs);
-                Spanned::new(span, StmX::Assign { lhs: Dest { dest, is_init: *is_init, var: var.clone() }, rhs })
+                Spanned::new(span, StmX::Assign { lhs: Dest { dest, is_init: *is_init }, rhs })
             }
             StmX::Fuel(..) => stm.clone(),
             StmX::DeadEnd(..) => stm.clone(),

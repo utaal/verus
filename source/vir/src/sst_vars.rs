@@ -1,6 +1,6 @@
 use crate::ast::Typ;
 use crate::def::Spanned;
-use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest};
+use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest, Exp};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -17,6 +17,12 @@ fn to_ident_set(input: &HashSet<UniqueIdent>) -> HashSet<Arc<String>> {
 // - which variables have been modified within each statement
 pub type AssignMap = HashMap<*const Spanned<StmX>, HashSet<Arc<String>>>;
 
+pub(crate) fn get_loc_var(
+    exp: &Exp,
+) -> UniqueIdent {
+    todo!()
+}
+
 pub(crate) fn stm_assign(
     assign_map: &mut AssignMap,
     declared: &HashMap<UniqueIdent, Typ>,
@@ -26,9 +32,10 @@ pub(crate) fn stm_assign(
 ) -> Stm {
     let result = match &stm.x {
         StmX::Call(_, _, _, Some(dest)) => {
-            assigned.insert(dest.var.clone());
+            let var: UniqueIdent = todo!();
+            assigned.insert(var.clone());
             if !dest.is_init {
-                modified.insert(dest.var.clone());
+                modified.insert(var.clone());
             }
             stm.clone()
         }
@@ -37,10 +44,11 @@ pub(crate) fn stm_assign(
         | StmX::AssertBV(..)
         | StmX::Assume(_)
         | StmX::Fuel(..) => stm.clone(),
-        StmX::Assign { lhs: Dest { var: lhs, dest, is_init }, rhs: _ } => {
-            assigned.insert(lhs.clone());
+        StmX::Assign { lhs: Dest { dest, is_init }, rhs: _ } => {
+            let var = get_loc_var(dest);
+            assigned.insert(var.clone());
             if !is_init {
-                modified.insert(lhs.clone());
+                modified.insert(var.clone());
             }
             stm.clone()
         }

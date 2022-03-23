@@ -300,7 +300,6 @@ fn mk_decreases_at_entry(ctxt: &Ctxt, span: &Span, exps: &Vec<Exp>) -> (Vec<Loca
             span.clone(),
             StmX::Assign {
                 lhs: Dest {
-                    var: uniq_ident.clone(),
                     dest: crate::ast_to_sst::var_loc_exp(&span, &typ, uniq_ident),
                     is_init: true,
                 },
