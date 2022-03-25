@@ -19,6 +19,7 @@ fn main2() {
     assert(t == q);
 }
 
+// Don't use this
 #[spec]
 fn mul(a: u64, b: u64)  -> u64 {
     a * b
@@ -84,4 +85,28 @@ fn main3() {
     assert(divides(x, z));
     assert(divides(y, z));
     // TOOD assert(x % z == 0);
+}
+
+// -----------------
+
+fn add1(v: &mut u64) {
+    ensures(*v == *old(v) + 1);
+    *v = *v + 1;
+}
+
+fn main4() {
+    let mut x = 1;
+    add1(&mut x);
+    assert(x == 2);
+}
+
+fn add1_func(v: u64) -> u64 {
+    ensures(|res: u64| res == v + 1);
+    v + 1
+}
+
+fn main5() {
+    let mut x = 1;
+    x = add1_func(x);
+    assert(x == 2);
 }
