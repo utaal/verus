@@ -159,6 +159,22 @@ fn fibo_impl(n: u64) -> u64 {
 // ## 18 -- 18-reverse.rs -- spec variables
 
 fn reverse(v: &mut Vec<u64>) {
+
+    let length = v.len();
+
+    let mut n: usize = 0;
+    while n < length / 2 {
+
+        let x = *v.index(n);
+        let y = *v.index(length - 1 - n);
+        v.set(n, y);
+        v.set(length - 1 - n, x);
+
+        n = n + 1;
+    }
+}
+
+fn reverse(v: &mut Vec<u64>) {
     ensures([
         v.len() == old(v).len(),
         forall(|i: int| 0 <= i && i < old(v).len() >>= v.index(i) == old(v).index(old(v).len() - i - 1)),
