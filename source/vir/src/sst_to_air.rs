@@ -619,6 +619,16 @@ impl State {
     }
 }
 
+fn loc_is_var(e: &Exp) -> Option<&UniqueIdent> {
+    match &e.x {
+        ExpX::Loc(loc) => match &loc.x {
+            ExpX::VarLoc(x) => Some(x),
+            _ => None,
+        }
+        _ => None,
+    }
+}
+
 fn assume_var(span: &Span, x: &UniqueIdent, exp: &Exp) -> Stm {
     let x_var = SpannedTyped::new(&span, &exp.typ, ExpX::Var(x.clone()));
     let eqx = ExpX::Binary(BinaryOp::Eq(Mode::Spec), x_var, exp.clone());
@@ -985,20 +995,28 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             vec![Arc::new(StmtX::Assume(exp_to_expr(ctx, &expr, expr_ctxt)))]
         }
         StmX::Assign { lhs: Dest { dest, is_init: true }, rhs } => {
-            stm_to_stmts(ctx, state, &assume_var(&stm.span, /* lhs */ todo!(), rhs))
+            let x = loc_is_var(dest).expect("is_init assign dest must be a variable");
+            stm_to_stmts(ctx, state, &assume_var(&stm.span, x, rhs))
         }
         StmX::Assign { lhs: Dest { dest, is_init: false }, rhs } => {
             let mut stmts: Vec<Stmt> = Vec::new();
-            let name = suffix_local_unique_id(/* lhs */ todo!());
-            stmts.push(Arc::new(StmtX::Assign(name, exp_to_expr(ctx, rhs, expr_ctxt))));
-            if ctx.debug {
-                // Add a snapshot after we modify the destination
-                let sid = state.update_current_sid(SUFFIX_SNAP_MUT);
-                let snapshot = Arc::new(StmtX::Snapshot(sid.clone()));
-                stmts.push(snapshot);
-                // Update the snap_map so that it reflects the state _after_ the
-                // statement takes effect.
-                state.map_span(&stm, SpanKind::Full);
+            if let Some(x) = loc_is_var(dest) {
+                let name = suffix_local_unique_id(x);
+                stmts.push(Arc::new(StmtX::Assign(name, exp_to_expr(ctx, rhs, expr_ctxt))));
+                if ctx.debug {
+                    // Add a snapshot after we modify the destination
+                    let sid = state.update_current_sid(SUFFIX_SNAP_MUT);
+                    let snapshot = Arc::new(StmtX::Snapshot(sid.clone()));
+                    stmts.push(snapshot);
+                    // Update the snap_map so that it reflects the state _after_ the
+                    // statement takes effect.
+                    state.map_span(&stm, SpanKind::Full);
+                }
+            } else {
+                todo!();
+                if ctx.debug {
+                    unimplemented!("complex assignments are unsupported in debugger mode");
+                }
             }
             stmts
         }
