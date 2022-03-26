@@ -10,7 +10,7 @@ use crate::def::{
     prefix_pre_var, prefix_requires, prefix_unbox, snapshot_ident, suffix_global_id,
     suffix_local_expr_id, suffix_local_stmt_id, suffix_local_unique_id, suffix_typ_param_id,
     variant_field_ident, variant_ident, SnapPos, SpanKind, Spanned, FUEL_BOOL, FUEL_BOOL_DEFAULT,
-    FUEL_DEFAULTS, FUEL_ID, FUEL_PARAM, FUEL_TYPE, POLY, SNAPSHOT_CALL, SNAPSHOT_PRE, SUCC,
+    FUEL_DEFAULTS, FUEL_ID, FUEL_PARAM, FUEL_TYPE, POLY, SNAPSHOT_CALL, SNAPSHOT_PRE, SNAPSHOT_ASSIGN, SUCC,
     SUFFIX_SNAP_JOIN, SUFFIX_SNAP_MUT, SUFFIX_SNAP_WHILE_BEGIN, SUFFIX_SNAP_WHILE_END,
 };
 use crate::inv_masks::MaskSet;
@@ -787,10 +787,10 @@ fn loc_to_field_path(loc: &Exp) -> (UniqueIdent, LocFieldInfo<Vec<FieldOpr>>) {
     }
 }
 
-fn snapshotted_var_locs(arg: &Exp) -> Exp {
+fn snapshotted_var_locs(arg: &Exp, snapshot_name: &str) -> Exp {
     crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
         ExpX::VarLoc(x) => {
-            SpannedTyped::new(&e.span, &e.typ, ExpX::Old(snapshot_ident(SNAPSHOT_CALL), x.clone()))
+            SpannedTyped::new(&e.span, &e.typ, ExpX::Old(snapshot_ident(snapshot_name), x.clone()))
         }
         _ => e.clone(),
     })
@@ -834,7 +834,7 @@ fn assume_other_fields_unchanged(
                                 SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone())),
                             ),
                         );
-                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp), expr_ctxt);
+                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp, SNAPSHOT_CALL), expr_ctxt);
                         let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
                         vec![Arc::new(StmtX::Assume(Arc::new(ExprX::Binary(
                             air::ast::BinaryOp::Eq,
@@ -906,7 +906,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                         .or_insert(LocFieldInfo { base_typ, base_span, a: Vec::new() })
                         .a
                         .push(fields);
-                    let arg_old = snapshotted_var_locs(arg);
+                    let arg_old = snapshotted_var_locs(arg, SNAPSHOT_CALL);
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_old, expr_ctxt));
                     ens_args_wo_typ.push(exp_to_expr(ctx, &arg_x, expr_ctxt));
                 } else {
@@ -1019,6 +1019,12 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 }
             } else {
                 todo!();
+                let base = get_loc_var(dest);
+                stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_ASSIGN))));
+                stmts.push(Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))));
+                // TODO: let eq = SpannedTyped::new(&dest.span, &Arc::new(TypX::Bool), todo!());
+                // TODO: stmts.push(Spanned::new(dest.span.clone(), StmX::Assume(eq)));
+                todo!(); // TODO: snapshotted_var_locs
                 if ctx.debug {
                     unimplemented!("complex assignments are unsupported in debugger mode");
                 }
