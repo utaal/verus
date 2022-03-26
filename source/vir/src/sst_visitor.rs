@@ -1,6 +1,6 @@
 use crate::ast::{Ident, SpannedTyped, VirErr};
 use crate::def::Spanned;
-use crate::sst::{BndX, Exp, ExpX, Stm, StmX, Trig, Trigs, UniqueIdent, Dest};
+use crate::sst::{BndX, Dest, Exp, ExpX, Stm, StmX, Trig, Trigs, UniqueIdent};
 use crate::util::vec_map;
 use crate::visitor::expr_visitor_control_flow;
 pub(crate) use crate::visitor::VisitorControlFlow;

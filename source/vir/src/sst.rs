@@ -79,7 +79,6 @@ pub struct Dest {
 pub type Stm = Arc<Spanned<StmX>>;
 pub type Stms = Arc<Vec<Stm>>;
 
-
 #[derive(Debug)]
 pub enum StmX {
     // call to exec/proof function

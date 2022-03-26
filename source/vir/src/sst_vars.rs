@@ -1,6 +1,6 @@
 use crate::ast::{Typ, UnaryOpr};
 use crate::def::Spanned;
-use crate::sst::{Stm, StmX, Stms, UniqueIdent, Dest, Exp, ExpX};
+use crate::sst::{Dest, Exp, ExpX, Stm, StmX, Stms, UniqueIdent};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -17,9 +17,7 @@ fn to_ident_set(input: &HashSet<UniqueIdent>) -> HashSet<Arc<String>> {
 // - which variables have been modified within each statement
 pub type AssignMap = HashMap<*const Spanned<StmX>, HashSet<Arc<String>>>;
 
-pub(crate) fn get_loc_var(
-    exp: &Exp,
-) -> UniqueIdent {
+pub(crate) fn get_loc_var(exp: &Exp) -> UniqueIdent {
     match &exp.x {
         ExpX::Loc(x) => get_loc_var(x),
         ExpX::UnaryOpr(UnaryOpr::Field { .. }, x) => get_loc_var(x),

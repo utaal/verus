@@ -16,7 +16,7 @@ use crate::def::{
 use crate::inv_masks::MaskSet;
 use crate::poly::{typ_as_mono, MonoTyp, MonoTypX};
 use crate::sst::{BndX, Dest, Exp, ExpX, LocalDecl, Stm, StmX, UniqueIdent};
-use crate::sst_vars::{AssignMap, get_loc_var};
+use crate::sst_vars::{get_loc_var, AssignMap};
 use crate::util::vec_map;
 use air::ast::{
     BindX, Binder, BinderX, Binders, Command, CommandX, Commands, Constant, Decl, DeclX, Expr,
@@ -624,7 +624,7 @@ fn loc_is_var(e: &Exp) -> Option<&UniqueIdent> {
         ExpX::Loc(loc) => match &loc.x {
             ExpX::VarLoc(x) => Some(x),
             _ => None,
-        }
+        },
         _ => None,
     }
 }
@@ -797,7 +797,14 @@ fn snapshotted_var_locs(arg: &Exp) -> Exp {
 }
 
 // TODO way too many Vec allocs
-fn assume_other_fields_unchanged(ctx: &Ctx, state: &mut State, stm_span: &Span, base: &UniqueIdent, mutated_fields: &LocFieldInfo<Vec<Vec<FieldOpr>>>, expr_ctxt: ExprCtxt) -> Vec<Stmt> {
+fn assume_other_fields_unchanged(
+    ctx: &Ctx,
+    state: &mut State,
+    stm_span: &Span,
+    base: &UniqueIdent,
+    mutated_fields: &LocFieldInfo<Vec<Vec<FieldOpr>>>,
+    expr_ctxt: ExprCtxt,
+) -> Vec<Stmt> {
     let LocFieldInfo { base_typ, base_span, a: updates } = mutated_fields;
     match &updates[..] {
         [f] if f.len() == 0 => vec![],
@@ -806,17 +813,13 @@ fn assume_other_fields_unchanged(ctx: &Ctx, state: &mut State, stm_span: &Span, 
             let FieldOpr { datatype, variant, field: _ } = &updates[0][0];
             for u in updates {
                 assert!(u[0].datatype == *datatype && u[0].variant == *variant);
-                updated_fields
-                    .entry(&u[0].field)
-                    .or_insert(Vec::new())
-                    .push(u[1..].to_vec());
+                updated_fields.entry(&u[0].field).or_insert(Vec::new()).push(u[1..].to_vec());
             }
             let datatype_fields = &get_variant(&ctx.global.datatypes[datatype], variant).a;
             datatype_fields
                 .iter()
                 .flat_map(|field| {
-                    if let Some(updated_field) = updated_fields.get(&field.name)
-                    {
+                    if let Some(updated_field) = updated_fields.get(&field.name) {
                         vec![].into_iter()
                     } else {
                         let field_exp = SpannedTyped::new(
@@ -828,18 +831,10 @@ fn assume_other_fields_unchanged(ctx: &Ctx, state: &mut State, stm_span: &Span, 
                                     variant: variant.clone(),
                                     field: field.name.clone(),
                                 }),
-                                SpannedTyped::new(
-                                    base_span,
-                                    base_typ,
-                                    ExpX::VarLoc(base.clone()),
-                                ),
+                                SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone())),
                             ),
                         );
-                        let old = exp_to_expr(
-                            ctx,
-                            &snapshotted_var_locs(&field_exp),
-                            expr_ctxt,
-                        );
+                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp), expr_ctxt);
                         let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
                         vec![Arc::new(StmtX::Assume(Arc::new(ExprX::Binary(
                             air::ast::BinaryOp::Eq,
@@ -921,7 +916,17 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut_stmts: Vec<_> = mutated_fields
                 .keys()
                 .map(|base| Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))))
-                .chain(mutated_fields.iter().flat_map(|(base, mutated_fields)| assume_other_fields_unchanged(ctx, state, &stm.span, base, mutated_fields, expr_ctxt).into_iter()))
+                .chain(mutated_fields.iter().flat_map(|(base, mutated_fields)| {
+                    assume_other_fields_unchanged(
+                        ctx,
+                        state,
+                        &stm.span,
+                        base,
+                        mutated_fields,
+                        expr_ctxt,
+                    )
+                    .into_iter()
+                }))
                 .collect::<Vec<_>>();
             if call_snapshot {
                 stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_CALL))));

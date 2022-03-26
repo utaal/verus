@@ -11,7 +11,7 @@ use crate::def::{
 };
 use crate::func_to_air::params_to_pars;
 use crate::scc::Graph;
-use crate::sst::{BndX, Exp, ExpX, Exps, LocalDecl, LocalDeclX, Stm, StmX, UniqueIdent, Dest};
+use crate::sst::{BndX, Dest, Exp, ExpX, Exps, LocalDecl, LocalDeclX, Stm, StmX, UniqueIdent};
 use crate::sst_visitor::{
     exp_rename_vars, exp_visitor_check, exp_visitor_dfs, map_exp_visitor, map_stm_visitor,
     stm_visitor_dfs, VisitorControlFlow,
