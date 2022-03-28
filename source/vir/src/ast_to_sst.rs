@@ -401,7 +401,7 @@ pub(crate) fn expr_to_stm_opt(
         ExprX::Assign { init_not_mut, lhs: lhs_expr, rhs: expr2 } => {
             let (mut stms, lhs_exp) = expr_to_stm(ctx, state, lhs_expr)?;
             match expr_must_be_call_stm(ctx, state, expr2)? {
-                Some((mut stms2, func_path, typs, _, args)) => {
+                Some((stms2, func_path, typs, _, args)) => {
                     // make a Call
                     let dest = Dest { dest: lhs_exp, is_init: *init_not_mut };
                     stms.extend(stms2.into_iter());
@@ -410,7 +410,7 @@ pub(crate) fn expr_to_stm_opt(
                 }
                 None => {
                     // make an Assign
-                    let (mut stms2, e2) = expr_to_stm(ctx, state, expr2)?;
+                    let (stms2, e2) = expr_to_stm(ctx, state, expr2)?;
                     let assign = StmX::Assign {
                         lhs: Dest { dest: lhs_exp, is_init: *init_not_mut },
                         rhs: e2,

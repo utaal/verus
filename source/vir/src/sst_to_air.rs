@@ -621,10 +621,7 @@ impl State {
 
 fn loc_is_var(e: &Exp) -> Option<&UniqueIdent> {
     match &e.x {
-        ExpX::Loc(loc) => match &loc.x {
-            ExpX::VarLoc(x) => Some(x),
-            _ => None,
-        },
+        ExpX::VarLoc(x) => Some(x),
         _ => None,
     }
 }
@@ -796,10 +793,18 @@ fn snapshotted_var_locs(arg: &Exp, snapshot_name: &str) -> Exp {
     })
 }
 
+fn snapshotted_vars(arg: &Exp, snapshot_name: &str) -> Exp {
+    crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
+        ExpX::Var(x) => {
+            SpannedTyped::new(&e.span, &e.typ, ExpX::Old(snapshot_ident(snapshot_name), x.clone()))
+        }
+        _ => e.clone(),
+    })
+}
+
 // TODO way too many Vec allocs
 fn assume_other_fields_unchanged(
     ctx: &Ctx,
-    state: &mut State,
     stm_span: &Span,
     base: &UniqueIdent,
     mutated_fields: &LocFieldInfo<Vec<Vec<FieldOpr>>>,
@@ -819,7 +824,7 @@ fn assume_other_fields_unchanged(
             datatype_fields
                 .iter()
                 .flat_map(|field| {
-                    if let Some(updated_field) = updated_fields.get(&field.name) {
+                    if let Some(_) = updated_fields.get(&field.name) {
                         vec![].into_iter()
                     } else {
                         let field_exp = SpannedTyped::new(
@@ -881,7 +886,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
             let mut ens_args_wo_typ = Vec::new();
             let mut mutated_fields: BTreeMap<_, LocFieldInfo<Vec<_>>> = BTreeMap::new();
             for (param, arg) in func.x.params.iter().zip(args.iter()) {
-                let arg_x = if let Some(Dest { dest, is_init }) = dest {
+                let arg_x = if let Some(Dest { dest, is_init: _ }) = dest {
                     let var: UniqueIdent = get_loc_var(dest);
                     crate::sst_visitor::map_exp_visitor(arg, &mut |e| match &e.x {
                         ExpX::Var(x) if *x == var => {
@@ -919,7 +924,6 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 .chain(mutated_fields.iter().flat_map(|(base, mutated_fields)| {
                     assume_other_fields_unchanged(
                         ctx,
-                        state,
                         &stm.span,
                         base,
                         mutated_fields,
@@ -1018,13 +1022,18 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     state.map_span(&stm, SpanKind::Full);
                 }
             } else {
-                todo!();
-                let base = get_loc_var(dest);
+                let (base_var, LocFieldInfo { base_typ, base_span, a: fields }) = loc_to_field_path(dest);
                 stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_ASSIGN))));
-                stmts.push(Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))));
-                // TODO: let eq = SpannedTyped::new(&dest.span, &Arc::new(TypX::Bool), todo!());
-                // TODO: stmts.push(Spanned::new(dest.span.clone(), StmX::Assume(eq)));
-                todo!(); // TODO: snapshotted_var_locs
+                stmts.push(Arc::new(StmtX::Havoc(suffix_local_unique_id(&base_var))));
+                let snapshotted_rhs = snapshotted_vars(rhs, SNAPSHOT_ASSIGN);
+                let eqx = ExpX::Binary(BinaryOp::Eq(Mode::Spec), dest.clone(), snapshotted_rhs);
+                let eq = SpannedTyped::new(&stm.span, &Arc::new(TypX::Bool), eqx);
+                stmts.extend(stm_to_stmts(ctx, state, &Spanned::new(stm.span.clone(), StmX::Assume(eq))));
+                stmts.extend(assume_other_fields_unchanged(ctx, &stm.span, &base_var, &LocFieldInfo {
+                    base_typ,
+                    base_span,
+                    a: vec![fields],
+                }, expr_ctxt));
                 if ctx.debug {
                     unimplemented!("complex assignments are unsupported in debugger mode");
                 }

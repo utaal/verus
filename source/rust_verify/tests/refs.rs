@@ -189,7 +189,7 @@ test_verify_one_file! {
 
         impl Wrap {
             fn outer(&mut self) {
-                requires(old(self).w.v < 10);
+                requires(old(self).w.v == 2);
                 self.w.add1();
                 assert(self.w.v == 3);
             }
