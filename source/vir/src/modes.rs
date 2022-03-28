@@ -401,7 +401,6 @@ fn check_expr(typing: &mut Typing, outer_mode: Mode, expr: &Expr) -> Result<Mode
                 return err_str(&expr.span, "assignment is not allowed in forall statements");
             }
             let x_mode = get_var_loc_mode(typing, lhs, *init_not_mut)?;
-            // typing.erasure_modes.var_modes.push((lhs.span.clone(), x_mode));
             check_expr_has_mode(typing, outer_mode, rhs, x_mode)?;
             Ok(x_mode)
         }
