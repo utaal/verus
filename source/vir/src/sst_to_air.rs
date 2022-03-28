@@ -10,8 +10,9 @@ use crate::def::{
     prefix_pre_var, prefix_requires, prefix_unbox, snapshot_ident, suffix_global_id,
     suffix_local_expr_id, suffix_local_stmt_id, suffix_local_unique_id, suffix_typ_param_id,
     variant_field_ident, variant_ident, SnapPos, SpanKind, Spanned, FUEL_BOOL, FUEL_BOOL_DEFAULT,
-    FUEL_DEFAULTS, FUEL_ID, FUEL_PARAM, FUEL_TYPE, POLY, SNAPSHOT_CALL, SNAPSHOT_PRE, SNAPSHOT_ASSIGN, SUCC,
-    SUFFIX_SNAP_JOIN, SUFFIX_SNAP_MUT, SUFFIX_SNAP_WHILE_BEGIN, SUFFIX_SNAP_WHILE_END,
+    FUEL_DEFAULTS, FUEL_ID, FUEL_PARAM, FUEL_TYPE, POLY, SNAPSHOT_ASSIGN, SNAPSHOT_CALL,
+    SNAPSHOT_PRE, SUCC, SUFFIX_SNAP_JOIN, SUFFIX_SNAP_MUT, SUFFIX_SNAP_WHILE_BEGIN,
+    SUFFIX_SNAP_WHILE_END,
 };
 use crate::inv_masks::MaskSet;
 use crate::poly::{typ_as_mono, MonoTyp, MonoTypX};
@@ -814,8 +815,16 @@ fn assume_other_fields_unchanged(
 ) -> Option<Stmt> {
     let LocFieldInfo { base_typ, base_span, a: updates } = mutated_fields;
     let base_exp = SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone()));
-    let eqs = assume_other_fields_unchanged_inner(ctx, snapshot_name, stm_span, &base_exp, updates, expr_ctxt);
-    (eqs.len() > 0).then(|| Arc::new(StmtX::Assume(Arc::new(ExprX::Multi(MultiOp::And, Arc::new(eqs))))))
+    let eqs = assume_other_fields_unchanged_inner(
+        ctx,
+        snapshot_name,
+        stm_span,
+        &base_exp,
+        updates,
+        expr_ctxt,
+    );
+    (eqs.len() > 0)
+        .then(|| Arc::new(StmtX::Assume(Arc::new(ExprX::Multi(MultiOp::And, Arc::new(eqs))))))
 }
 
 // TODO way too many Vec allocs
@@ -859,16 +868,17 @@ fn assume_other_fields_unchanged_inner(
                             stm_span,
                             &field_exp,
                             further_updates,
-                            expr_ctxt).into_iter()
-                    } else {
-                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp, snapshot_name), expr_ctxt);
-                        let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
-                        vec![Arc::new(ExprX::Binary(
-                            air::ast::BinaryOp::Eq,
-                            old,
-                            new,
-                        ))]
+                            expr_ctxt,
+                        )
                         .into_iter()
+                    } else {
+                        let old = exp_to_expr(
+                            ctx,
+                            &snapshotted_var_locs(&field_exp, snapshot_name),
+                            expr_ctxt,
+                        );
+                        let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
+                        vec![Arc::new(ExprX::Binary(air::ast::BinaryOp::Eq, old, new))].into_iter()
                     }
                 })
                 .collect::<Vec<_>>()
@@ -1045,18 +1055,26 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                     state.map_span(&stm, SpanKind::Full);
                 }
             } else {
-                let (base_var, LocFieldInfo { base_typ, base_span, a: fields }) = loc_to_field_path(dest);
+                let (base_var, LocFieldInfo { base_typ, base_span, a: fields }) =
+                    loc_to_field_path(dest);
                 stmts.push(Arc::new(StmtX::Snapshot(snapshot_ident(SNAPSHOT_ASSIGN))));
                 stmts.push(Arc::new(StmtX::Havoc(suffix_local_unique_id(&base_var))));
                 let snapshotted_rhs = snapshotted_vars(rhs, SNAPSHOT_ASSIGN);
                 let eqx = ExpX::Binary(BinaryOp::Eq(Mode::Spec), dest.clone(), snapshotted_rhs);
                 let eq = SpannedTyped::new(&stm.span, &Arc::new(TypX::Bool), eqx);
-                stmts.extend(stm_to_stmts(ctx, state, &Spanned::new(stm.span.clone(), StmX::Assume(eq))));
-                stmts.extend(assume_other_fields_unchanged(ctx, SNAPSHOT_ASSIGN, &stm.span, &base_var, &LocFieldInfo {
-                    base_typ,
-                    base_span,
-                    a: vec![fields],
-                }, expr_ctxt));
+                stmts.extend(stm_to_stmts(
+                    ctx,
+                    state,
+                    &Spanned::new(stm.span.clone(), StmX::Assume(eq)),
+                ));
+                stmts.extend(assume_other_fields_unchanged(
+                    ctx,
+                    SNAPSHOT_ASSIGN,
+                    &stm.span,
+                    &base_var,
+                    &LocFieldInfo { base_typ, base_span, a: vec![fields] },
+                    expr_ctxt,
+                ));
                 if ctx.debug {
                     unimplemented!("complex assignments are unsupported in debugger mode");
                 }
