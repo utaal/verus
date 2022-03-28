@@ -353,12 +353,8 @@ test_verify_one_file! {
         }
 
         fn add1(a: &mut u32) {
-            requires([
-                *old(a) < 10,
-            ]);
-            ensures([
-                *a == *old(a) + 1,
-            ]);
+            requires(*old(a) < 10);
+            ensures(*a == *old(a) + 1);
             *a = *a + 1;
         }
 

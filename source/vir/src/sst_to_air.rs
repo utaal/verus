@@ -954,6 +954,8 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 .keys()
                 .map(|base| Arc::new(StmtX::Havoc(suffix_local_unique_id(&base))))
                 .chain(mutated_fields.iter().flat_map(|(base, mutated_fields)| {
+                    let LocFieldInfo { base_typ, base_span, a: _ } = mutated_fields;
+                    let base_exp = SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone()));
                     assume_other_fields_unchanged(
                         ctx,
                         SNAPSHOT_CALL,
@@ -963,6 +965,8 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                         expr_ctxt,
                     )
                     .into_iter()
+                    .chain(typ_invariant(ctx, base_typ, &string_var(&suffix_local_unique_id(base))).into_iter()
+                           .map(|e| Arc::new(StmtX::Assume(e))))
                 }))
                 .collect::<Vec<_>>();
             if call_snapshot {

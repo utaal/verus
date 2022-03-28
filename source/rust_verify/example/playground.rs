@@ -24,11 +24,11 @@ fn add1(a: &mut u32) {
 }
 
 fn foo(s: S<u32>) {
-    let mut s = s;
-    //let mut s = S { a: 5, b: false };
+    // let mut s = s;
+    let mut s = S { a: 5, b: false };
     add1(&mut s.a);
-    assume(s.a == 6);
-    assume(s.b == false);
+    assert(s.a == 6);
+    assert(s.b == false);
     assert(s == S { a: 6, b: false });
 }
 
