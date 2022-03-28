@@ -345,7 +345,8 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    #[test] test_mut_ref_field_pass_2 code! {
+    // TODO TODO TODO XXX
+    #[ignore] #[test] test_mut_ref_field_pass_2 code! {
         #[derive(PartialEq, Eq, Structural)]
         struct S<A> {
             a: A,

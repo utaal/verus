@@ -756,6 +756,7 @@ fn exp_to_bv_expr(state: &State, exp: &Exp) -> Expr {
     }
 }
 
+#[derive(Debug)]
 struct LocFieldInfo<A> {
     base_typ: Typ,
     base_span: Span,
@@ -770,6 +771,7 @@ fn loc_to_field_path(loc: &Exp) -> (UniqueIdent, LocFieldInfo<Vec<FieldOpr>>) {
             ExpX::Loc(ee) => e = ee,
             ExpX::UnaryOpr(UnaryOpr::Box(_) | UnaryOpr::Unbox(_), ee) => e = ee,
             ExpX::VarLoc(x) => {
+                fields.reverse();
                 return (
                     x.clone(),
                     LocFieldInfo { base_typ: e.typ.clone(), base_span: e.span.clone(), a: fields },
@@ -802,15 +804,29 @@ fn snapshotted_vars(arg: &Exp, snapshot_name: &str) -> Exp {
     })
 }
 
-// TODO way too many Vec allocs
 fn assume_other_fields_unchanged(
     ctx: &Ctx,
+    snapshot_name: &str,
     stm_span: &Span,
     base: &UniqueIdent,
     mutated_fields: &LocFieldInfo<Vec<Vec<FieldOpr>>>,
     expr_ctxt: ExprCtxt,
-) -> Vec<Stmt> {
+) -> Option<Stmt> {
     let LocFieldInfo { base_typ, base_span, a: updates } = mutated_fields;
+    let base_exp = SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone()));
+    let eqs = assume_other_fields_unchanged_inner(ctx, snapshot_name, stm_span, &base_exp, updates, expr_ctxt);
+    (eqs.len() > 0).then(|| Arc::new(StmtX::Assume(Arc::new(ExprX::Multi(MultiOp::And, Arc::new(eqs))))))
+}
+
+// TODO way too many Vec allocs
+fn assume_other_fields_unchanged_inner(
+    ctx: &Ctx,
+    snapshot_name: &str,
+    stm_span: &Span,
+    base: &Exp,
+    updates: &Vec<Vec<FieldOpr>>,
+    expr_ctxt: ExprCtxt,
+) -> Vec<Expr> {
     match &updates[..] {
         [f] if f.len() == 0 => vec![],
         _ => {
@@ -824,28 +840,34 @@ fn assume_other_fields_unchanged(
             datatype_fields
                 .iter()
                 .flat_map(|field| {
-                    if let Some(_) = updated_fields.get(&field.name) {
-                        vec![].into_iter()
-                    } else {
-                        let field_exp = SpannedTyped::new(
+                    let field_exp = SpannedTyped::new(
+                        stm_span,
+                        &field.a.0,
+                        ExpX::UnaryOpr(
+                            UnaryOpr::Field(FieldOpr {
+                                datatype: datatype.clone(),
+                                variant: variant.clone(),
+                                field: field.name.clone(),
+                            }),
+                            base.clone(),
+                        ),
+                    );
+                    if let Some(further_updates) = updated_fields.get(&field.name) {
+                        assume_other_fields_unchanged_inner(
+                            ctx,
+                            snapshot_name,
                             stm_span,
-                            &field.a.0,
-                            ExpX::UnaryOpr(
-                                UnaryOpr::Field(FieldOpr {
-                                    datatype: datatype.clone(),
-                                    variant: variant.clone(),
-                                    field: field.name.clone(),
-                                }),
-                                SpannedTyped::new(base_span, base_typ, ExpX::VarLoc(base.clone())),
-                            ),
-                        );
-                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp, SNAPSHOT_CALL), expr_ctxt);
+                            &field_exp,
+                            further_updates,
+                            expr_ctxt).into_iter()
+                    } else {
+                        let old = exp_to_expr(ctx, &snapshotted_var_locs(&field_exp, snapshot_name), expr_ctxt);
                         let new = exp_to_expr(ctx, &field_exp, expr_ctxt);
-                        vec![Arc::new(StmtX::Assume(Arc::new(ExprX::Binary(
+                        vec![Arc::new(ExprX::Binary(
                             air::ast::BinaryOp::Eq,
                             old,
                             new,
-                        ))))]
+                        ))]
                         .into_iter()
                     }
                 })
@@ -924,6 +946,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 .chain(mutated_fields.iter().flat_map(|(base, mutated_fields)| {
                     assume_other_fields_unchanged(
                         ctx,
+                        SNAPSHOT_CALL,
                         &stm.span,
                         base,
                         mutated_fields,
@@ -1029,7 +1052,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                 let eqx = ExpX::Binary(BinaryOp::Eq(Mode::Spec), dest.clone(), snapshotted_rhs);
                 let eq = SpannedTyped::new(&stm.span, &Arc::new(TypX::Bool), eqx);
                 stmts.extend(stm_to_stmts(ctx, state, &Spanned::new(stm.span.clone(), StmX::Assume(eq))));
-                stmts.extend(assume_other_fields_unchanged(ctx, &stm.span, &base_var, &LocFieldInfo {
+                stmts.extend(assume_other_fields_unchanged(ctx, SNAPSHOT_ASSIGN, &stm.span, &base_var, &LocFieldInfo {
                     base_typ,
                     base_span,
                     a: vec![fields],
