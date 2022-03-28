@@ -964,8 +964,11 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Vec<Stmt> {
                         expr_ctxt,
                     )
                     .into_iter()
-                    .chain(typ_invariant(ctx, base_typ, &string_var(&suffix_local_unique_id(base))).into_iter()
-                           .map(|e| Arc::new(StmtX::Assume(e))))
+                    .chain(
+                        typ_invariant(ctx, base_typ, &string_var(&suffix_local_unique_id(base)))
+                            .into_iter()
+                            .map(|e| Arc::new(StmtX::Assume(e))),
+                    )
                 }))
                 .collect::<Vec<_>>();
             if call_snapshot {
