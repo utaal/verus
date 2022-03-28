@@ -596,7 +596,7 @@ test_verify_one_file! {
 
 test_verify_one_file! {
     // TODO support complex arguments to &mut params
-    #[test] #[ignore] test_field_update_param_mut_ref_pass FIELD_UPDATE.to_string() + FIELD_UPDATE_2 + code_str! {
+    #[test] test_field_update_param_mut_ref_pass FIELD_UPDATE.to_string() + FIELD_UPDATE_2 + code_str! {
         fn foo(s: &mut S, v: usize) {
             ensures(*s == S { a: old(s).a + v, ..*old(s) });
             s.a = s.a + v;
