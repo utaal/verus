@@ -68,6 +68,7 @@ fn run_example_for_file(file_path: &str) {
                 "invalid command for example file test: use one of 'expect-success', 'expect-errors', 'expect-failures' or 'ignore'"
             ),
         }
+
     }
 
     #[cfg(target_os = "windows")]
