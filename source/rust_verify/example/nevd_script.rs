@@ -1,9 +1,10 @@
+#![feature(fmt_internals)]
+#![allow(unused_imports)]
+#![allow(unused_macros)]
 fn main() {}
 
-// ## 11 -- 10-program.rs
-
 mod pervasive;
-#[allow(unused_imports)] use { builtin_macros::*, builtin::*, pervasive::*, option::*, seq::*, vec::*, };
+ use { builtin_macros::*, builtin::*, pervasive::*, option::*, seq::*, vec::*, cell::*, option::Option::*};
 
 verus! {
 
@@ -17,47 +18,6 @@ fn max(a: u64, b: u64) -> (ret: u64)
     //-   if a >= b { b } else { a }
     /*+*/ if a >= b { a } else { b }
 }
-
-// ;; Function-Def crate::max
-// (push)
-//  (declare-const ret~10@ Int)
-//  (declare-const a~2@ Int)
-//  (declare-const b~4@ Int)
-//  (assert fuel_defaults)
-//  (assert (uInv 64 a~2@))
-//  (assert (uInv 64 b~4@))
-//  ;; postcondition not satisfied
-//  (declare-const %%location_label%%0 Bool)
-//  ;; postcondition not satisfied
-//  (declare-const %%location_label%%1 Bool)
-//  (declare-const %%query%% Bool)
-//  (assert
-//   (=>
-//    %%query%%
-//    (not (=>
-//      (= ret~10@ (ite
-//        (>= a~2@ b~4@)
-//        a~2@
-//        b~4@
-//      ))
-//      (and
-//       (=>
-//        %%location_label%%0
-//        (or
-//         (= ret~10@ a~2@)
-//         (= ret~10@ b~4@)
-//       ))
-//       (=>
-//        %%location_label%%1
-//        (and
-//         (>= ret~10@ a~2@)
-//         (>= ret~10@ b~4@)
-//  )))))))
-//  (assert %%query%%)
-//  (set-option :rlimit 30000000)
-//  (check-sat)
-//  (set-option :rlimit 0)
-// (pop)
 
 // ## B -- B-fibo.rs
 
@@ -141,62 +101,64 @@ exec fn g(v1: &mut Vec<u64>, v2: &mut Vec<u64>)
     v2.push(52);
 }
 
-// exec fn g_(v1: Vec<u64>, v2: Vec<u64>) -> (out: (Vec<u64>, Vec<u64>))
-//     requires
-//         v1@.len() == 2,
-//         v2@.len() == 3,
-//     ensures
-//         out.0@.len() == out.1@.len()
-// {
-//     let v1a = v1.push(42);
-//     let v1b = v1.push(43);
-//     let v2a.push(52);
-//     (v1b, v2a)
-// }
+// ## D -- D-recommends-solvers.rs
 
-// ## E -- E-reverse.rs -- spec variables
-
-/* See vectors.rs
-fn reverse(v: &mut Vec<u64>) {
-    ensures([
-        v.len() == old(v).len(),
-        forall(|i: int| 0 <= i && i < old(v).len()
-               >>= v.index(i) == old(v).index(old(v).len() - i - 1)),
-    ]);
-
-    let length = v.len();
-    #[spec] let v1 = *v;
-    let mut n: usize = 0;
-    while n < length / 2 {
-        invariant([
-            length == v.len(),
-            forall(|i: int| n <= i && i + n < length >>= v.index(i) == v1.index(i)),
-            forall(|i: int| 0 <= i && i < n >>= v.index(i) == v1.index(length - i - 1)),
-            forall(|i: int| 0 <= i && i < n >>= v1.index(i) == v.index(length - i - 1)),
-        ]);
-
-        let x = *v.index(n);
-        let y = *v.index(length - 1 - n);
-        v.set(n, y);
-        v.set(length - 1 - n, x);
-
-        n = n + 1;
-    }
-}
-*/
-
-// F -- F-linear-proof
-
-// cell::RefCell::Cell<X>
-
-// G -- G-bitvector.rs
-
-fn mod8_bw(x: u32) -> (ret: u32)
-    ensures
-        ret == x % 8,
+spec fn divide(x: nat, y: nat) -> nat
+    recommends y != 0
 {
-    assert(x & 7 == x % 8) by(bit_vector);
-    x & 7
+    x / y
 }
+
+proof fn div_is_smaller(x: nat, y: nat)
+    requires
+        y != 0
+    ensures
+        divide(x, y) <= x,
+{
+/*+*/    assert(y != 0 ==> x / y <= x) by(nonlinear_arith);
+}
+
+// ## E -- E-solvers.rs
+
+proof fn bit_vector_demo(x: u64, y: u64) {
+    assert(x & 0xff < 0x100) by(bit_vector);
+    assert(x ^ x == 0) by(bit_vector);
+    assert(x ^ y == y ^ x) by(bit_vector);
+    assert(x & y <= x | y) by(bit_vector);
+}
+
+// F -- F-linear-proof.rs
+//  
+//  #[verifier(external_body)]
+//  fn release_perm(perm: Tracked<PermissionOpt<u64>>) { todo!() }
+//  
+//  fn increment(
+//      counter: PCell<u64>,
+//      perm: &mut Tracked<PermissionOpt<u64>>,
+//  )
+//      requires
+//          counter.id() === old(perm)@@.pcell,
+//          old(perm)@@.value.is_Some() &&
+//          old(perm)@@.value.get_Some_0() < 100,
+//      ensures
+//          perm@@.pcell === old(perm)@@.pcell,
+//          perm@@.value === Some((old(perm)@@.value.get_Some_0() + 1) as u64)
+//  {
+//      let cur_i: u64 = *counter.borrow(proof { perm });
+//      counter.replace(perm, cur_i + 1);
+//  }
+//  
+//  fn start_thread(counter: PCell<u64>, perm: Tracked<PermissionOpt<u64>>)
+//      requires
+//          counter.id() === perm@@.pcell, perm@@.value === None,
+//  {
+//      let mut perm: Tracked<PermissionOpt<u64>> = perm;
+//      counter.put(proof { &mut perm }, 5);
+//      assert(perm@@.value === Some(5));
+//  
+//      proof { release_perm(perm); }
+//      increment(counter, &mut perm);
+//      assert(perm@@.value === Some(6));
+//  }
 
 } // verus!
