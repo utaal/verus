@@ -1,9 +1,5 @@
-#![feature(fmt_internals)]
-#![allow(unused_imports)]
-#![allow(unused_macros)]
-fn main() {}
-
-mod pervasive;
+#![feature(fmt_internals)] #![allow(unused_imports)] #![allow(unused_macros)]
+fn main() {} mod pervasive;
  use { builtin_macros::*, builtin::*, pervasive::*, option::*, seq::*, vec::*, cell::*, option::Option::*};
 
 verus! {
@@ -128,37 +124,36 @@ proof fn bit_vector_demo(x: u64, y: u64) {
 }
 
 // F -- F-linear-proof.rs
-//  
-//  #[verifier(external_body)]
-//  fn release_perm(perm: Tracked<PermissionOpt<u64>>) { todo!() }
-//  
-//  fn increment(
-//      counter: PCell<u64>,
-//      perm: &mut Tracked<PermissionOpt<u64>>,
-//  )
-//      requires
-//          counter.id() === old(perm)@@.pcell,
-//          old(perm)@@.value.is_Some() &&
-//          old(perm)@@.value.get_Some_0() < 100,
-//      ensures
-//          perm@@.pcell === old(perm)@@.pcell,
-//          perm@@.value === Some((old(perm)@@.value.get_Some_0() + 1) as u64)
-//  {
-//      let cur_i: u64 = *counter.borrow(proof { perm });
-//      counter.replace(perm, cur_i + 1);
-//  }
-//  
-//  fn start_thread(counter: PCell<u64>, perm: Tracked<PermissionOpt<u64>>)
-//      requires
-//          counter.id() === perm@@.pcell, perm@@.value === None,
-//  {
-//      let mut perm: Tracked<PermissionOpt<u64>> = perm;
-//      counter.put(proof { &mut perm }, 5);
-//      assert(perm@@.value === Some(5));
-//  
-//      proof { release_perm(perm); }
-//      increment(counter, &mut perm);
-//      assert(perm@@.value === Some(6));
-//  }
+#[verifier(external_body)]
+fn release_perm(perm: Tracked<PermissionOpt<u64>>) { todo!() }
+
+fn increment(
+    counter: PCell<u64>,
+    perm: &mut Tracked<PermissionOpt<u64>>,
+)
+    requires
+        counter.id() === old(perm)@@.pcell,
+        old(perm)@@.value.is_Some() &&
+        old(perm)@@.value.get_Some_0() < 100,
+    ensures
+        perm@@.pcell === old(perm)@@.pcell,
+        perm@@.value === Some((old(perm)@@.value.get_Some_0() + 1) as u64)
+{
+    let cur_i: u64 = *counter.borrow(perm);
+    counter.replace(perm, cur_i + 1);
+}
+
+fn start_thread(counter: PCell<u64>, perm: Tracked<PermissionOpt<u64>>)
+    requires
+        counter.id() === perm@@.pcell, perm@@.value === None,
+{
+    let mut perm: Tracked<PermissionOpt<u64>> = perm;
+    counter.put(&mut perm, 5);
+    assert(perm@@.value === Some(5));
+
+    // release_perm(perm);
+    increment(counter, &mut perm);
+    assert(perm@@.value === Some(6));
+}
 
 } // verus!
