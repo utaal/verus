@@ -77,7 +77,6 @@ pub struct Args {
     pub profile: bool,
     pub profile_all: bool,
     pub compile: bool,
-    pub erasure: Erasure,
     pub solver_version_check: bool,
 }
 
@@ -156,7 +155,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
     const OPT_PROFILE: &str = "profile";
     const OPT_PROFILE_ALL: &str = "profile-all";
     const OPT_COMPILE: &str = "compile";
-    const OPT_ERASURE: &str = "erasure";
     const OPT_NO_SOLVER_VERSION_CHECK: &str = "no-solver-version-check";
 
     let mut opts = Options::new();
@@ -237,12 +235,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
     );
     opts.optflag("", OPT_PROFILE_ALL, "Always collect and report prover performance data");
     opts.optflag("", OPT_COMPILE, "Run Rustc compiler after verification");
-    opts.optopt(
-        "",
-        OPT_ERASURE,
-        "Mechanism to erase ghost code (options: ast, macro) default = ast",
-        "STRING",
-    );
     opts.optflag("", OPT_NO_SOLVER_VERSION_CHECK, "Skip the check that the solver has the expected version (useful to experiment with different versions of z3)");
     opts.optflag("h", "help", "print this help menu");
 
@@ -368,12 +360,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
         profile: matches.opt_present(OPT_PROFILE),
         profile_all: matches.opt_present(OPT_PROFILE_ALL),
         compile: matches.opt_present(OPT_COMPILE),
-        erasure: match matches.opt_str(OPT_ERASURE).as_ref().map(|x| x.as_str()) {
-            None => Erasure::default(),
-            Some("ast") => Erasure::Ast,
-            Some("macro") => Erasure::Macro,
-            Some(s) => error(format!("unexpected erasure argument {s}")),
-        },
         solver_version_check: !matches.opt_present(OPT_NO_SOLVER_VERSION_CHECK),
     };
 
