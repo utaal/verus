@@ -124,7 +124,7 @@ use std::io::Write;
 use vir::ast::VirErr;
 
 // Call Rust's mir_borrowck to check lifetimes of #[spec] and #[proof] code and variables
-pub(crate) fn check<'tcx>(queries: &'tcx rustc_interface::Queries<'tcx>) {
+pub(crate) fn check<'tcx>(queries: &'tcx verus_rustc_interface::Queries<'tcx>) {
     queries.global_ctxt().expect("global_ctxt").peek_mut().enter(|tcx| {
         let hir = tcx.hir();
         let krate = hir.krate();
@@ -219,21 +219,21 @@ struct LifetimeCallbacks {
     capture_output: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
 }
 
-impl rustc_driver::Callbacks for LifetimeCallbacks {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
-        config.diagnostic_output =
-            rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
-                output: self.capture_output.clone(),
-            }));
+impl verus_rustc_driver::Callbacks for LifetimeCallbacks {
+    fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
+        config.diagnostic_output = todo!(); // TODO
+        // TODO rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
+        // TODO     output: self.capture_output.clone(),
+        // TODO }));
     }
 
     fn after_parsing<'tcx>(
         &mut self,
-        _compiler: &rustc_interface::interface::Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
+        _compiler: &verus_rustc_interface::interface::Compiler,
+        queries: &'tcx verus_rustc_interface::Queries<'tcx>,
+    ) -> verus_rustc_driver::Compilation {
         check(queries);
-        rustc_driver::Compilation::Stop
+        verus_rustc_driver::Compilation::Stop
     }
 }
 

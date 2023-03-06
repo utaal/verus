@@ -54,18 +54,18 @@ pub(crate) fn token_stream_to_trees(
     Ok(trees.into_boxed_slice())
 }
 
-fn mac_args_to_tree(span: Span, name: String, args: &MacArgs) -> Result<AttrTree, ()> {
-    match args {
-        MacArgs::Empty => Ok(AttrTree::Fun(span, name, None)),
-        MacArgs::Delimited(_, _, token_stream) => {
-            Ok(AttrTree::Fun(span, name, Some(token_stream_to_trees(span, token_stream)?)))
-        }
-        MacArgs::Eq(_, token) => match token_to_string(token)? {
-            None => Err(()),
-            Some(token) => Ok(AttrTree::Eq(span, name, token)),
-        },
-    }
-}
+// TODO fn mac_args_to_tree(span: Span, name: String, args: &MacArgs) -> Result<AttrTree, ()> {
+// TODO     match args {
+// TODO         MacArgs::Empty => Ok(AttrTree::Fun(span, name, None)),
+// TODO         MacArgs::Delimited(_, _, token_stream) => {
+// TODO             Ok(AttrTree::Fun(span, name, Some(token_stream_to_trees(span, token_stream)?)))
+// TODO         }
+// TODO         MacArgs::Eq(_, token) => match token_to_string(token)? {
+// TODO             None => Err(()),
+// TODO             Some(token) => Ok(AttrTree::Eq(span, name, token)),
+// TODO         },
+// TODO     }
+// TODO }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum VerusPrefix {
@@ -84,24 +84,26 @@ fn attr_to_tree(attr: &Attribute) -> Result<Option<(AttrPrefix, Span, AttrTree)>
     match &attr.kind {
         AttrKind::Normal(item, _) => match &item.path.segments[..] {
             [segment] if segment.ident.as_str() == "verifier" => match &item.args {
-                MacArgs::Delimited(_, _, token_stream) => {
-                    let trees: Box<[AttrTree]> = token_stream_to_trees(attr.span, token_stream)
-                        .map_err(|_| vir_err_span_str(attr.span, "invalid verifier attribute"))?;
-                    if trees.len() != 1 {
-                        return err_span_str(attr.span, "invalid verifier attribute");
-                    }
-                    let mut trees = trees.into_vec().into_iter();
-                    let tree: AttrTree = trees
-                        .next()
-                        .ok_or(vir_err_span_str(attr.span, "invalid verifier attribute"))?;
-                    Ok(Some((AttrPrefix::Verifier, attr.span, tree)))
-                }
+                // TODO MacArgs::Delimited(_, _, token_stream) => {
+                // TODO     let trees: Box<[AttrTree]> = token_stream_to_trees(attr.span, token_stream)
+                // TODO         .map_err(|_| vir_err_span_str(attr.span, "invalid verifier attribute"))?;
+                // TODO     if trees.len() != 1 {
+                // TODO         return err_span_str(attr.span, "invalid verifier attribute");
+                // TODO     }
+                // TODO     let mut trees = trees.into_vec().into_iter();
+                // TODO     let tree: AttrTree = trees
+                // TODO         .next()
+                // TODO         .ok_or(vir_err_span_str(attr.span, "invalid verifier attribute"))?;
+                // TODO     Ok(Some((AttrPrefix::Verifier, attr.span, tree)))
+                // TODO }
                 _ => return err_span_str(attr.span, "invalid verifier attribute"),
             },
             [prefix_segment, segment] if prefix_segment.ident.as_str() == "verifier" => {
-                mac_args_to_tree(attr.span, segment.ident.to_string(), &item.args)
-                    .map(|tree| Some((AttrPrefix::Verifier, attr.span, tree)))
-                    .map_err(|_| vir_err_span_str(attr.span, "invalid verifier attribute"))
+                let a: usize = item.args;
+                todo!()
+                // TODO mac_args_to_tree(attr.span, segment.ident.to_string(), &item.args)
+                // TODO     .map(|tree| Some((AttrPrefix::Verifier, attr.span, tree)))
+                // TODO     .map_err(|_| vir_err_span_str(attr.span, "invalid verifier attribute"))
             }
             [prefix_segment, segment] if prefix_segment.ident.as_str() == "verus" => {
                 let name = segment.ident.to_string();
@@ -112,18 +114,18 @@ fn attr_to_tree(attr: &Attribute) -> Result<Option<(AttrPrefix, Span, AttrTree)>
                     }
                 };
                 match &item.args {
-                    MacArgs::Delimited(_, _, token_stream) => {
-                        let trees: Box<[AttrTree]> = token_stream_to_trees(attr.span, token_stream)
-                            .map_err(|_| vir_err_span_str(attr.span, "invalid verus attribute"))?;
-                        if trees.len() != 1 {
-                            return err_span_str(attr.span, "invalid verus attribute");
-                        }
-                        let mut trees = trees.into_vec().into_iter();
-                        let tree: AttrTree = trees
-                            .next()
-                            .ok_or(vir_err_span_str(attr.span, "invalid verus attribute"))?;
-                        Ok(Some((AttrPrefix::Verus(verus_prefix), attr.span, tree)))
-                    }
+                    // TODO MacArgs::Delimited(_, _, token_stream) => {
+                    // TODO     let trees: Box<[AttrTree]> = token_stream_to_trees(attr.span, token_stream)
+                    // TODO         .map_err(|_| vir_err_span_str(attr.span, "invalid verus attribute"))?;
+                    // TODO     if trees.len() != 1 {
+                    // TODO         return err_span_str(attr.span, "invalid verus attribute");
+                    // TODO     }
+                    // TODO     let mut trees = trees.into_vec().into_iter();
+                    // TODO     let tree: AttrTree = trees
+                    // TODO         .next()
+                    // TODO         .ok_or(vir_err_span_str(attr.span, "invalid verus attribute"))?;
+                    // TODO     Ok(Some((AttrPrefix::Verus(verus_prefix), attr.span, tree)))
+                    // TODO }
                     _ => return err_span_str(attr.span, "invalid verus attribute"),
                 }
             }

@@ -16,7 +16,6 @@ use rustc_ast::ast::{
 };
 use rustc_ast::ptr::P;
 use rustc_hir::HirId;
-use rustc_interface::interface::Compiler;
 use rustc_span::symbol::{Ident, Symbol};
 use rustc_span::{Span, SpanData};
 

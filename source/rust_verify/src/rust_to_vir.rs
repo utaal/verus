@@ -500,7 +500,8 @@ impl<'tcx> rustc_hir::intravisit::Visitor<'tcx> for VisitMod<'tcx> {
     type Map = rustc_middle::hir::map::Map<'tcx>;
 
     fn nested_visit_map(&mut self) -> rustc_hir::intravisit::NestedVisitorMap<Self::Map> {
-        rustc_hir::intravisit::NestedVisitorMap::All(self.tcx.hir())
+        // TODO rustc_hir::intravisit::NestedVisitorMap::All(self.tcx.hir())
+        todo!()
     }
 
     fn visit_item(&mut self, item: &'tcx Item<'tcx>) {

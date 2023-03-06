@@ -1,15 +1,14 @@
-use crate::erase::CompilerCallbacksEraseAst;
 use crate::util::signalling;
-use crate::verifier::{Verifier, VerifierCallbacksEraseAst, VerifierCallbacksEraseMacro};
+use crate::verifier::{Verifier, VerifierCallbacksEraseMacro};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 fn mk_compiler<'a, 'b>(
     rustc_args: &'a [String],
-    verifier: &'b mut (dyn rustc_driver::Callbacks + Send),
+    verifier: &'b mut (dyn verus_rustc_driver::Callbacks + Send),
     file_loader: Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>,
-) -> rustc_driver::RunCompiler<'a, 'b> {
-    let mut compiler = rustc_driver::RunCompiler::new(rustc_args, verifier);
+) -> verus_rustc_driver::RunCompiler<'a, 'b> {
+    let mut compiler = verus_rustc_driver::RunCompiler::new(rustc_args, verifier);
     compiler.set_file_loader(Some(file_loader));
     compiler
 }
@@ -18,7 +17,7 @@ fn run_compiler<'a, 'b>(
     mut rustc_args: Vec<String>,
     syntax_macro: bool,
     erase_ghost: bool,
-    verifier: &'b mut (dyn rustc_driver::Callbacks + Send),
+    verifier: &'b mut (dyn verus_rustc_driver::Callbacks + Send),
     file_loader: Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>,
 ) -> Result<(), rustc_errors::ErrorReported> {
     crate::config::enable_default_features_and_verus_attr(
@@ -95,25 +94,26 @@ pub struct CompilerCallbacksEraseMacro {
     pub test_capture_output: Option<std::sync::Arc<std::sync::Mutex<Vec<u8>>>>,
 }
 
-impl rustc_driver::Callbacks for CompilerCallbacksEraseMacro {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
+impl verus_rustc_driver::Callbacks for CompilerCallbacksEraseMacro {
+    fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
         if let Some(target) = &self.test_capture_output {
-            config.diagnostic_output = rustc_session::DiagnosticOutput::Raw(Box::new(
-                crate::verifier::DiagnosticOutputBuffer { output: target.clone() },
-            ));
+            config.diagnostic_output = todo!(); // TODO
+            // TODO rustc_session::DiagnosticOutput::Raw(Box::new(
+            // TODO     crate::verifier::DiagnosticOutputBuffer { output: target.clone() },
+            // TODO ));
         }
     }
 
     fn after_parsing<'tcx>(
         &mut self,
-        _compiler: &rustc_interface::interface::Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
+        _compiler: &verus_rustc_interface::interface::Compiler,
+        queries: &'tcx verus_rustc_interface::Queries<'tcx>,
+    ) -> verus_rustc_driver::Compilation {
         if self.lifetimes_only {
             crate::lifetime::check(queries);
-            rustc_driver::Compilation::Stop
+            verus_rustc_driver::Compilation::Stop
         } else {
-            rustc_driver::Compilation::Continue
+            verus_rustc_driver::Compilation::Continue
         }
     }
 }
@@ -213,8 +213,5 @@ pub fn run<F>(
 where
     F: 'static + rustc_span::source_map::FileLoader + Send + Sync + Clone,
 {
-    match verifier.args.erasure {
-        crate::config::Erasure::Ast => run_with_erase_ast(verifier, rustc_args, file_loader),
-        crate::config::Erasure::Macro => run_with_erase_macro(verifier, rustc_args, file_loader),
-    }
+    run_with_erase_macro(verifier, rustc_args, file_loader)
 }

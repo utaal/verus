@@ -5,14 +5,15 @@ use crate::{unsupported, unsupported_err_unless};
 use rustc_ast::Mutability;
 use rustc_hir::definitions::DefPath;
 use rustc_hir::{
-    GenericParam, GenericParamKind, Generics, HirId, QPath, Ty, Visibility, VisibilityKind,
+    GenericParam, GenericParamKind, Generics, HirId, QPath, Ty,
 };
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::ty::GenericParamDefKind;
 use rustc_middle::ty::ProjectionPredicate;
-use rustc_middle::ty::ProjectionTy;
+use rustc_middle::ty::Projection;
 use rustc_middle::ty::{AdtDef, TyCtxt, TyKind};
 use rustc_middle::ty::{BoundConstness, ImplPolarity, PredicateKind, TraitPredicate};
+use rustc_middle::ty::Visibility;
 use rustc_span::def_id::{DefId, LOCAL_CRATE};
 use rustc_span::symbol::{kw, Ident};
 use rustc_span::{Span, Symbol};
@@ -234,11 +235,13 @@ pub(crate) fn local_to_var<'tcx>(
 }
 
 pub(crate) fn is_visibility_private(vis_kind: &VisibilityKind, inherited_is_private: bool) -> bool {
-    match vis_kind {
-        VisibilityKind::Inherited => inherited_is_private,
-        VisibilityKind::Public => false,
-        VisibilityKind::Crate(_) => false,
-        VisibilityKind::Restricted { .. } => unsupported!("restricted visibility"),
+    let vis: rustc_middle::ty::Visibility = ctxt.tcx.visibility(def_id);
+    // TODO inherited_is_private
+    match vis {
+        Visibility::Public => false,
+        // TODO reject pub(crate)
+        Visibility::Restricted(_) => true,
+        Visibility::Invisible => true,
     }
 }
 
@@ -262,8 +265,8 @@ pub(crate) fn get_range(typ: &Typ) -> IntRange {
 
 pub(crate) fn mk_range<'tcx>(ty: rustc_middle::ty::Ty<'tcx>) -> IntRange {
     match ty.kind() {
-        TyKind::Adt(_, _) if ty.to_string() == crate::typecheck::BUILTIN_INT => IntRange::Int,
-        TyKind::Adt(_, _) if ty.to_string() == crate::typecheck::BUILTIN_NAT => IntRange::Nat,
+        TyKind::Adt(_, _) if ty.to_string() == crate::def::BUILTIN_INT => IntRange::Int,
+        TyKind::Adt(_, _) if ty.to_string() == crate::def::BUILTIN_NAT => IntRange::Nat,
         TyKind::Uint(rustc_middle::ty::UintTy::U8) => IntRange::U(8),
         TyKind::Uint(rustc_middle::ty::UintTy::U16) => IntRange::U(16),
         TyKind::Uint(rustc_middle::ty::UintTy::U32) => IntRange::U(32),
@@ -360,9 +363,9 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
                 return (Arc::new(TypX::StrSlice), false);
             }
             // TODO use lang items instead of string comparisons
-            if s == crate::typecheck::BUILTIN_INT {
+            if s == crate::def::BUILTIN_INT {
                 (Arc::new(TypX::Int(IntRange::Int)), false)
-            } else if s == crate::typecheck::BUILTIN_NAT {
+            } else if s == crate::def::BUILTIN_NAT {
                 (Arc::new(TypX::Int(IntRange::Nat)), false)
             } else {
                 let typ_args: Vec<(Typ, bool)> = args
