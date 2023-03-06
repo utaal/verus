@@ -51,7 +51,6 @@ pub struct Args {
     pub no_verify: bool,
     pub no_lifetime: bool,
     pub no_auto_recommends_check: bool,
-    pub no_enhanced_typecheck: bool,
     pub arch_word_bits: vir::prelude::ArchWordBits,
     pub time: bool,
     pub rlimit: u32,
@@ -128,7 +127,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
     const OPT_NO_VERIFY: &str = "no-verify";
     const OPT_NO_LIFETIME: &str = "no-lifetime";
     const OPT_NO_AUTO_RECOMMENDS_CHECK: &str = "no-auto-recommends-check";
-    const OPT_DEPRECATED_ENHANCED_TYPECHECK: &str = "deprecated-enhanced-typecheck";
     const OPT_ARCH_WORD_BITS: &str = "arch-word-bits";
     const OPT_TIME: &str = "time";
     const OPT_RLIMIT: &str = "rlimit";
@@ -185,11 +183,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
         "",
         OPT_NO_AUTO_RECOMMENDS_CHECK,
         "Do not automatically check recommends after verification failures",
-    );
-    opts.optflag(
-        "",
-        OPT_DEPRECATED_ENHANCED_TYPECHECK,
-        "Enable (deprecated) Verus extensions to Rust type checker",
     );
     opts.optopt("", OPT_ARCH_WORD_BITS, "Size in bits for usize/isize: valid options are either '32', '64', or '32,64'. (default: 32,64)\nWARNING: this flag is a temporary workaround and will be removed in the near future", "BITS");
     opts.optflag("", OPT_TIME, "Measure and report time taken");
@@ -300,7 +293,6 @@ pub fn parse_args(program: &String, args: impl Iterator<Item = String>) -> (Args
         no_verify: matches.opt_present(OPT_NO_VERIFY),
         no_lifetime: matches.opt_present(OPT_NO_LIFETIME),
         no_auto_recommends_check: matches.opt_present(OPT_NO_AUTO_RECOMMENDS_CHECK),
-        no_enhanced_typecheck: !matches.opt_present(OPT_DEPRECATED_ENHANCED_TYPECHECK),
         arch_word_bits: matches
             .opt_str(OPT_ARCH_WORD_BITS)
             .map(|bits| {

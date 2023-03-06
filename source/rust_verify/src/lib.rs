@@ -4,12 +4,12 @@
 
 extern crate rustc_ast;
 extern crate rustc_data_structures;
-extern crate rustc_driver;
+extern crate verus_rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_hir_pretty;
 extern crate rustc_infer;
-extern crate rustc_interface;
+extern crate verus_rustc_interface;
 extern crate rustc_lint;
 extern crate rustc_macros;
 extern crate rustc_middle;
@@ -19,7 +19,6 @@ extern crate rustc_resolve;
 extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_trait_selection;
-extern crate rustc_typeck;
 extern crate smallvec;
 
 mod attributes;
@@ -46,6 +45,5 @@ pub mod rust_to_vir_func;
 #[cfg(feature = "singular")]
 pub mod singular;
 mod spans;
-pub mod typecheck;
 pub mod util;
 pub mod verifier;

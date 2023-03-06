@@ -129,9 +129,6 @@ pub fn verify_files_and_pervasive(
             Default::default()
         };
 
-        if !files.iter().any(|(_, body)| body.contains("#[verifier(integer_ring)]")) {
-            our_args.no_enhanced_typecheck = true;
-        }
         if let Ok(path) = std::env::var("VERIFY_LOG_IR_PATH") {
             our_args.log_dir = Some(path);
             our_args.log_all = true;

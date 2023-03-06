@@ -1,7 +1,7 @@
 use crate::util::{err_span_str, err_span_string, vir_err_span_str};
 use rustc_ast::token::{Token, TokenKind};
 use rustc_ast::tokenstream::{TokenStream, TokenTree};
-use rustc_ast::{AttrKind, Attribute, MacArgs};
+use rustc_ast::{AttrKind, Attribute};
 use rustc_span::Span;
 use vir::ast::{Mode, TriggerAnnotation, VirErr};
 
