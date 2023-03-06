@@ -1358,7 +1358,7 @@ impl Verifier {
         let autoviewed_call_typs = Arc::new(std::sync::Mutex::new(HashMap::new()));
         match rustc_typeck::check_crate(tcx) {
             Ok(()) => {}
-            Err(rustc_errors::ErrorReported {}) => {
+            Err(/* TODO */ ()) => {
                 return Ok(false);
             }
         }

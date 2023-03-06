@@ -304,7 +304,7 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
     }
     let capture_output = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let mut callbacks = LifetimeCallbacks { capture_output };
-    let mut compiler = rustc_driver::RunCompiler::new(&rustc_args, &mut callbacks);
+    let mut compiler = verus_rustc_driver::RunCompiler::new(&rustc_args, &mut callbacks);
     compiler.set_file_loader(Some(Box::new(LifetimeFileLoader { rust_code })));
     let run = compiler.run();
     let bytes: &Vec<u8> = &*callbacks.capture_output.lock().expect("lock capture_output");

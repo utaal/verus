@@ -19,7 +19,7 @@ fn run_compiler<'a, 'b>(
     erase_ghost: bool,
     verifier: &'b mut (dyn verus_rustc_driver::Callbacks + Send),
     file_loader: Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>,
-) -> Result<(), rustc_errors::ErrorReported> {
+) -> Result<(), /* TODO */ ()> {
     crate::config::enable_default_features_and_verus_attr(
         &mut rustc_args,
         syntax_macro,
@@ -130,7 +130,7 @@ pub(crate) fn run_with_erase_macro_compile(
     file_loader: Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>,
     compile: bool,
     test_capture_output: Option<std::sync::Arc<std::sync::Mutex<Vec<u8>>>>,
-) -> Result<(), rustc_errors::ErrorReported> {
+) -> Result<(), /* TODO */ ()> {
     let mut callbacks =
         CompilerCallbacksEraseMacro { lifetimes_only: !compile, test_capture_output };
     rustc_args.extend(["--cfg", "verus_macro_erase_ghost"].map(|s| s.to_string()));

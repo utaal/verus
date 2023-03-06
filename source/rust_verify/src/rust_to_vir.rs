@@ -499,10 +499,10 @@ struct VisitMod<'tcx> {
 impl<'tcx> rustc_hir::intravisit::Visitor<'tcx> for VisitMod<'tcx> {
     type Map = rustc_middle::hir::map::Map<'tcx>;
 
-    fn nested_visit_map(&mut self) -> rustc_hir::intravisit::NestedVisitorMap<Self::Map> {
-        // TODO rustc_hir::intravisit::NestedVisitorMap::All(self.tcx.hir())
-        todo!()
-    }
+    // TODO fn nested_visit_map(&mut self) -> rustc_hir::intravisit::NestedVisitorMap<Self::Map> {
+    // TODO     // TODO rustc_hir::intravisit::NestedVisitorMap::All(self.tcx.hir())
+    // TODO     todo!()
+    // TODO }
 
     fn visit_item(&mut self, item: &'tcx Item<'tcx>) {
         self.ids.push(item.item_id());

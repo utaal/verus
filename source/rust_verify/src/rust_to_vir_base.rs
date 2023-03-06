@@ -1,5 +1,5 @@
 use crate::attributes::get_verifier_attrs;
-use crate::context::BodyCtxt;
+use crate::context::{Context, BodyCtxt};
 use crate::util::{err_span_str, unsupported_err_span};
 use crate::{unsupported, unsupported_err_unless};
 use rustc_ast::Mutability;
@@ -234,7 +234,7 @@ pub(crate) fn local_to_var<'tcx>(
     unique_local_name(ident.to_string(), local_id.index())
 }
 
-pub(crate) fn is_visibility_private(vis_kind: &VisibilityKind, inherited_is_private: bool) -> bool {
+pub(crate) fn is_visibility_private<'tcx>(ctxt: &Context<'tcx>, def_id: DefId, inherited_is_private: bool) -> bool {
     let vis: rustc_middle::ty::Visibility = ctxt.tcx.visibility(def_id);
     // TODO inherited_is_private
     match vis {
@@ -246,13 +246,14 @@ pub(crate) fn is_visibility_private(vis_kind: &VisibilityKind, inherited_is_priv
 }
 
 pub(crate) fn mk_visibility<'tcx>(
+    ctxt: &Context<'tcx>,
     owning_module: &Option<Path>,
-    vis: &Visibility<'tcx>,
     inherited_is_private: bool,
+    def_id: DefId,
 ) -> vir::ast::Visibility {
     vir::ast::Visibility {
         owning_module: owning_module.clone(),
-        is_private: is_visibility_private(&vis.node, inherited_is_private),
+        is_private: is_visibility_private(ctxt, def_id, inherited_is_private),
     }
 }
 
@@ -525,7 +526,7 @@ pub(crate) fn typ_of_node_expect_mut_ref<'tcx>(
 
 pub(crate) fn implements_structural<'tcx>(
     tcx: TyCtxt<'tcx>,
-    ty: &'tcx rustc_middle::ty::TyS<'tcx>,
+    ty: rustc_middle::ty::Ty<'tcx>,
 ) -> bool {
     let structural_def_id = tcx
         .get_diagnostic_item(rustc_span::Symbol::intern("builtin::Structural"))
@@ -769,7 +770,7 @@ pub(crate) fn check_generics_bounds<'tcx>(
                 };
             }
             PredicateKind::Projection(ProjectionPredicate {
-                projection_ty: ProjectionTy { substs: _, item_def_id },
+                projection_ty: Projection { substs: _, item_def_id },
                 ty: _,
             }) => {
                 // The trait bound `F: Fn(A) -> B`
