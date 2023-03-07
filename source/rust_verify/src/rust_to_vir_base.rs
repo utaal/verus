@@ -458,7 +458,8 @@ pub(crate) fn mid_ty_const_to_vir<'tcx>(
     tcx: TyCtxt<'tcx>,
     cnst: &rustc_middle::ty::Const<'tcx>,
 ) -> Typ {
-    use rustc_middle::mir::interpret::{ConstValue, Scalar};
+    // use rustc_middle::mir::interpret::{ConstValue, Scalar};
+    use rustc_middle::ty::ValTree;
     use rustc_middle::ty::ConstKind;
 
     let cnst = match cnst.kind() {
@@ -467,7 +468,7 @@ pub(crate) fn mid_ty_const_to_vir<'tcx>(
     };
     match cnst.kind() {
         ConstKind::Param(param) => Arc::new(TypX::TypParam(Arc::new(param.name.to_string()))),
-        ConstKind::Value(ConstValue::Scalar(Scalar::Int(i))) => {
+        ConstKind::Value(ValTree::Leaf(i)) => {
             let c = num_bigint::BigInt::from(i.assert_bits(i.size()));
             Arc::new(TypX::ConstInt(c))
         }
@@ -482,8 +483,9 @@ pub(crate) fn is_type_std_rc_or_arc<'tcx>(
     ty: rustc_middle::ty::Ty<'tcx>,
 ) -> bool {
     match ty.kind() {
-        TyKind::Adt(AdtDef { did, .. }, _args) => {
-            let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, *did));
+        TyKind::Adt(AdtDef(adt_def_data), _args) => {
+            let did = adt_def_data.did;
+            let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, did));
             if def_name == "alloc::rc::Rc" || def_name == "alloc::sync::Arc" {
                 return true;
             }
@@ -531,17 +533,21 @@ pub(crate) fn implements_structural<'tcx>(
     let structural_def_id = tcx
         .get_diagnostic_item(rustc_span::Symbol::intern("builtin::Structural"))
         .expect("structural trait is not defined");
-    let substs_ref = tcx.mk_substs([].iter());
-    let ty_impls_structural = tcx.infer_ctxt().enter(|infcx| {
+
+    use crate::rustc_middle::ty::TypeVisitable;
+    let infcx = tcx.infer_ctxt().build(); /* TODO correct? */
+    let ty = tcx.erase_regions(ty);
+    if ty.has_escaping_bound_vars() {
+        return false;
+    }
+    let ty_impls_structural = 
         infcx
             .type_implements_trait(
                 structural_def_id,
-                ty,
-                substs_ref,
+                vec![ty].into_iter(),
                 rustc_middle::ty::ParamEnv::empty(),
             )
-            .must_apply_modulo_regions()
-    });
+            .must_apply_modulo_regions();
     ty_impls_structural
 }
 
@@ -559,7 +565,7 @@ pub(crate) fn is_smt_equality<'tcx>(
         (TypX::Char, TypX::Char) => true,
         (TypX::Datatype(..), TypX::Datatype(..)) if types_equal(&t1, &t2) => {
             let ty = bctx.types.node_type(*id1);
-            implements_structural(bctx.ctxt.tcx, &ty)
+            implements_structural(bctx.ctxt.tcx, ty)
         }
         _ => false,
     }
@@ -647,7 +653,7 @@ pub(crate) fn check_generics_bounds<'tcx>(
     // so then we can handle the case where a method adds extra bounds to an impl
     // type parameter
 
-    let Generics { params: hir_params, where_clause: _, span: _ } = hir_generics;
+    let Generics { params: hir_params, has_where_clause_predicates: _, predicates: _, where_clause_span: _, span: _ } = hir_generics;
     let generics = tcx.generics_of(def_id);
 
     let mut mid_params: Vec<&rustc_middle::ty::GenericParamDef> = vec![];
