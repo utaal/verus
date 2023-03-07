@@ -145,7 +145,7 @@ pub(crate) fn fn_item_hir_id_to_self_path<'tcx>(tcx: TyCtxt<'tcx>, hir_id: HirId
                 // but converted into VIR datatypes.
 
                 let self_ty = tcx.type_of(owner_id.to_def_id());
-                let vir_ty = mid_ty_to_vir_ghost(tcx, self_ty, true, false).0;
+                let vir_ty = mid_ty_to_vir_ghost(tcx, &self_ty, true, false).0;
                 match &*vir_ty {
                     TypX::Datatype(p, _typ_args) => Some(p.clone()),
                     _ => panic!("impl type is not given by a path"),
@@ -233,13 +233,12 @@ pub(crate) fn local_to_var<'tcx>(
 }
 
 pub(crate) fn is_visibility_private<'tcx>(ctxt: &Context<'tcx>, def_id: DefId, inherited_is_private: bool) -> bool {
-    let vis: rustc_middle::ty::Visibility = ctxt.tcx.visibility(def_id);
+    let vis = ctxt.tcx.visibility(def_id);
     // TODO inherited_is_private
     match vis {
         Visibility::Public => false,
-        // TODO reject pub(crate)
+        // TODO reject pub(crate)?
         Visibility::Restricted(_) => true,
-        Visibility::Invisible => true,
     }
 }
 
@@ -262,7 +261,7 @@ pub(crate) fn get_range(typ: &Typ) -> IntRange {
     }
 }
 
-pub(crate) fn mk_range<'tcx>(ty: rustc_middle::ty::Ty<'tcx>) -> IntRange {
+pub(crate) fn mk_range<'tcx>(ty: &rustc_middle::ty::Ty<'tcx>) -> IntRange {
     match ty.kind() {
         TyKind::Adt(_, _) if ty.to_string() == crate::def::BUILTIN_INT => IntRange::Int,
         TyKind::Adt(_, _) if ty.to_string() == crate::def::BUILTIN_NAT => IntRange::Nat,
@@ -284,7 +283,7 @@ pub(crate) fn mk_range<'tcx>(ty: rustc_middle::ty::Ty<'tcx>) -> IntRange {
 
 pub(crate) fn mid_ty_simplify<'tcx>(
     tcx: TyCtxt<'tcx>,
-    ty: rustc_middle::ty::Ty<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
     allow_mut_ref: bool,
 ) -> rustc_middle::ty::Ty<'tcx> {
     match ty.kind() {
@@ -292,9 +291,10 @@ pub(crate) fn mid_ty_simplify<'tcx>(
         TyKind::Ref(_, t, Mutability::Mut) if allow_mut_ref => {
             mid_ty_simplify(tcx, t, allow_mut_ref)
         }
-        TyKind::Adt(AdtDef { did, .. }, args) => {
-            let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, *did));
-            let is_box = Some(*did) == tcx.lang_items().owned_box() && args.len() == 2;
+        TyKind::Adt(AdtDef(adt_def_data), args) => {
+            let did = adt_def_data.did;
+            let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, did));
+            let is_box = Some(did) == tcx.lang_items().owned_box() && args.len() == 2;
             let is_smart_ptr = (def_name == "alloc::rc::Rc"
                 || def_name == "alloc::sync::Arc"
                 || def_name == "builtin::Ghost"
@@ -302,15 +302,15 @@ pub(crate) fn mid_ty_simplify<'tcx>(
                 && args.len() == 1;
             if is_box || is_smart_ptr {
                 if let rustc_middle::ty::subst::GenericArgKind::Type(t) = args[0].unpack() {
-                    mid_ty_simplify(tcx, t, false)
+                    mid_ty_simplify(tcx, &t, false)
                 } else {
                     panic!("unexpected type argument")
                 }
             } else {
-                ty
+                ty.to_owned()
             }
         }
-        _ => ty,
+        _ => ty.to_owned(),
     }
 }
 
@@ -319,7 +319,7 @@ pub(crate) fn mid_ty_simplify<'tcx>(
 // returns VIR Typ and whether Ghost/Tracked was erased from around the outside of the VIR Typ
 pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
     tcx: TyCtxt<'tcx>,
-    ty: rustc_middle::ty::Ty<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
     as_datatype: bool,
     allow_mut_ref: bool,
 ) -> (Typ, bool) {
@@ -345,7 +345,8 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
         TyKind::Tuple(_) => {
             let typs: Vec<Typ> = ty
                 .tuple_fields()
-                .map(|t| mid_ty_to_vir_ghost(tcx, t, as_datatype, allow_mut_ref).0)
+                .iter()
+                .map(|t| mid_ty_to_vir_ghost(tcx, &t, as_datatype, allow_mut_ref).0)
                 .collect();
             (Arc::new(TypX::Tuple(Arc::new(typs))), false)
         }
@@ -354,10 +355,11 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
             let typs = Arc::new(vec![typ]);
             (Arc::new(TypX::Datatype(vir::def::slice_type(), typs)), false)
         }
-        TyKind::Adt(AdtDef { did, .. }, args) => {
+        TyKind::Adt(AdtDef(adt_def_data), args) => {
+            let did = adt_def_data.did;
             let s = ty.to_string();
             let is_strslice =
-                tcx.is_diagnostic_item(Symbol::intern("pervasive::string::StrSlice"), *did);
+                tcx.is_diagnostic_item(Symbol::intern("pervasive::string::StrSlice"), did);
             if is_strslice && !as_datatype {
                 return (Arc::new(TypX::StrSlice), false);
             }
@@ -371,18 +373,18 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
                     .iter()
                     .filter_map(|arg| match arg.unpack() {
                         rustc_middle::ty::subst::GenericArgKind::Type(t) => {
-                            Some(mid_ty_to_vir_ghost(tcx, t, as_datatype, allow_mut_ref))
+                            Some(mid_ty_to_vir_ghost(tcx, &t, as_datatype, allow_mut_ref))
                         }
                         rustc_middle::ty::subst::GenericArgKind::Lifetime(_) => None,
                         rustc_middle::ty::subst::GenericArgKind::Const(cnst) => {
-                            Some((mid_ty_const_to_vir(tcx, cnst), false))
+                            Some((mid_ty_const_to_vir(tcx, &cnst), false))
                         }
                     })
                     .collect();
-                if Some(*did) == tcx.lang_items().owned_box() && typ_args.len() == 2 {
+                if Some(did) == tcx.lang_items().owned_box() && typ_args.len() == 2 {
                     return typ_args[0].clone();
                 }
-                let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, *did));
+                let def_name = vir::ast_util::path_as_rust_name(&def_id_to_vir_path(tcx, did));
                 if (def_name == "alloc::rc::Rc" || def_name == "alloc::sync::Arc")
                     && typ_args.len() == 1
                 {
@@ -407,7 +409,7 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
                     return (Arc::new(TypX::Lambda(param_typs, ret_typ)), false);
                 }
                 let typ_args = typ_args.into_iter().map(|(t, _)| t).collect();
-                (Arc::new(def_id_to_datatype(tcx, *did, Arc::new(typ_args))), false)
+                (Arc::new(def_id_to_datatype(tcx, did, Arc::new(typ_args))), false)
             }
         }
         TyKind::Closure(def, substs) => {
@@ -425,7 +427,7 @@ pub(crate) fn mid_ty_to_vir_ghost<'tcx>(
             };
 
             let ret =
-                mid_ty_to_vir_ghost(tcx, sig.output().skip_binder(), as_datatype, allow_mut_ref).0;
+                mid_ty_to_vir_ghost(tcx, &sig.output().skip_binder(), as_datatype, allow_mut_ref).0;
             let id = def.as_local().unwrap().local_def_index.index();
             (Arc::new(TypX::AnonymousClosure(args, ret, id)), false)
         }
@@ -441,7 +443,7 @@ pub(crate) fn mid_ty_to_vir_datatype<'tcx>(
     ty: rustc_middle::ty::Ty<'tcx>,
     allow_mut_ref: bool,
 ) -> Typ {
-    mid_ty_to_vir_ghost(tcx, ty, true, allow_mut_ref).0
+    mid_ty_to_vir_ghost(tcx, &ty, true, allow_mut_ref).0
 }
 
 pub(crate) fn mid_ty_to_vir<'tcx>(
@@ -449,7 +451,7 @@ pub(crate) fn mid_ty_to_vir<'tcx>(
     ty: rustc_middle::ty::Ty<'tcx>,
     allow_mut_ref: bool,
 ) -> Typ {
-    mid_ty_to_vir_ghost(tcx, ty, false, allow_mut_ref).0
+    mid_ty_to_vir_ghost(tcx, &ty, false, allow_mut_ref).0
 }
 
 pub(crate) fn mid_ty_const_to_vir<'tcx>(
