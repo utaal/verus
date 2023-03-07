@@ -43,7 +43,7 @@ fn check_item<'tcx>(
             path.clone()
         } else {
             let owned_by =
-                ctxt.krate.owners[item.hir_id().owner].as_ref().expect("owner of item").node();
+                ctxt.krate.owners[item.hir_id().owner.def_id].as_owner().as_ref().expect("owner of item").node();
             def_id_to_vir_path(ctxt.tcx, owned_by.def_id().to_def_id())
         }
     };

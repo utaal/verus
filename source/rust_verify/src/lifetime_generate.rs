@@ -13,7 +13,7 @@ use rustc_hir::{
     AssocItemKind, BindingAnnotation, Block, BlockCheckMode, BodyId, Crate, Expr, ExprKind, FnSig,
     HirId, Impl, ImplItem, ImplItemKind, ItemKind, Node, OwnerNode, Pat, PatKind, QPath, Stmt,
     StmtKind, TraitFn, TraitItem, TraitItemKind, TraitItemRef, TraitRef, UnOp, Unsafety,
-    Closure, Let,
+    Closure, Let, MaybeOwner,
 };
 use rustc_middle::ty::subst::GenericArgKind;
 use rustc_middle::ty::{
@@ -1267,14 +1267,14 @@ fn erase_mir_generics<'tcx>(
     let mut fn_projections: HashMap<Id, (Typ, Typ)> = HashMap::new();
     for (pred, _) in mir_predicates.predicates.iter() {
         match pred.kind().no_bound_vars().expect("no_bound_vars") {
-            PredicateKind::RegionOutlives(pred) => {
+            PredicateKind::Clause(Clause::RegionOutlives(pred)) => {
                 let x = erase_hir_region(ctxt, state, &pred.0).expect("bound");
                 let bound = erase_hir_region(ctxt, state, &pred.1).expect("bound");
                 let x_ref = lifetimes.iter_mut().find(|p| p.name == x);
                 let x_ref = x_ref.expect("generic param bound");
                 x_ref.bounds.push(Bound::Id(bound));
             }
-            PredicateKind::TypeOutlives(pred) => {
+            PredicateKind::Clause(Clause::TypeOutlives(pred)) => {
                 let x = match *erase_ty(ctxt, state, &pred.0) {
                     TypX::TypParam(x) => x,
                     _ => panic!("PredicateKind::TypeOutlives"),
@@ -1284,8 +1284,8 @@ fn erase_mir_generics<'tcx>(
                 let x_ref = x_ref.expect("generic param bound");
                 x_ref.bounds.push(Bound::Id(bound));
             }
-            PredicateKind::Trait(pred) => {
-                let x = match *erase_ty(ctxt, state, pred.trait_ref.substs[0].expect_ty()) {
+            PredicateKind::Clause(Clause::Trait(pred)) => {
+                let x = match *erase_ty(ctxt, state, &pred.trait_ref.substs[0].expect_ty()) {
                     TypX::TypParam(x) => x,
                     _ => panic!("PredicateKind::Trait"),
                 };
@@ -1313,22 +1313,22 @@ fn erase_mir_generics<'tcx>(
                     fn_traits.insert(x, kind).map(|_| panic!("{:?}", pred));
                 }
             }
-            PredicateKind::Projection(pred) => {
-                if Some(pred.projection_ty.item_def_id) == ctxt.tcx.lang_items().fn_once_output() {
+            PredicateKind::Clause(Clause::Projection(pred)) => {
+                if Some(pred.projection_ty.def_id) == ctxt.tcx.lang_items().fn_once_output() {
                     assert!(pred.projection_ty.substs.len() == 2);
                     let x_ty = pred.projection_ty.substs[0].expect_ty();
-                    let x = match *erase_ty(ctxt, state, x_ty) {
+                    let x = match *erase_ty(ctxt, state, &x_ty) {
                         TypX::TypParam(x) => x,
                         _ => panic!("PredicateKind::Projection"),
                     };
                     let mut fn_params = match pred.projection_ty.substs[1].unpack() {
-                        GenericArgKind::Type(ty) => erase_ty(ctxt, state, ty),
+                        GenericArgKind::Type(ty) => erase_ty(ctxt, state, &ty),
                         _ => panic!("unexpected fn projection"),
                     };
                     if !matches!(*fn_params, TypX::Tuple(_)) {
                         fn_params = Box::new(TypX::Tuple(vec![fn_params]));
                     }
-                    let fn_ret = erase_ty(ctxt, state, &pred.ty);
+                    let fn_ret = erase_ty(ctxt, state, &pred.projection_ty.to_ty(ctxt.tcx)); // TODO correct?
                     fn_projections.insert(x, (fn_params, fn_ret)).map(|_| panic!("{:?}", pred));
                 }
             }
@@ -1376,7 +1376,7 @@ fn erase_fn_common<'tcx>(
             return;
         }
         if let Some(body_id) = body_id {
-            let def = rustc_middle::ty::WithOptConstParam::unknown(body_id.hir_id.owner);
+            let def = rustc_middle::ty::WithOptConstParam::unknown(body_id.hir_id.owner.def_id);
             let types = ctxt.tcx.typeck_opt_const_arg(def);
             ctxt.types_opt = Some(types);
             ctxt.ret_spec = Some(f_vir.x.ret.x.mode == Mode::Spec);
@@ -1438,12 +1438,12 @@ fn erase_fn_common<'tcx>(
                     if f_vir.x.ret.x.mode == Mode::Spec {
                         None
                     } else {
-                        Some((Some(ty.span), erase_ty(ctxt, state, fn_sig.output())))
+                        Some((Some(ty.span), erase_ty(ctxt, state, &fn_sig.output())))
                     }
                 }
             }
         } else {
-            Some((None, erase_ty(ctxt, state, fn_sig.output())))
+            Some((None, erase_ty(ctxt, state, &fn_sig.output())))
         };
         let decl = FunDecl {
             sig_span: sig_span,
@@ -1523,14 +1523,14 @@ fn erase_trait<'tcx>(
 ) {
     for trait_item_ref in items {
         let trait_item = ctxt.tcx.hir().trait_item(trait_item_ref.id);
-        let TraitItem { ident, def_id, generics: _, kind, span: _ } = trait_item;
+        let TraitItem { ident, owner_id, generics: _, kind, span: _, defaultness: _ } = trait_item;
         match kind {
             TraitItemKind::Fn(sig, fun) => {
                 let body_id = match fun {
                     TraitFn::Provided(body_id) => body_id,
                     _ => panic!("unexpected trait function"),
                 };
-                let id = def_id.to_def_id();
+                let id = owner_id.to_def_id();
                 erase_fn(
                     krate,
                     ctxt,
@@ -1566,8 +1566,8 @@ fn erase_impl<'tcx>(
         match impl_item_ref.kind {
             AssocItemKind::Fn { .. } => {
                 let impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
-                let ImplItem { ident, def_id, kind, .. } = impl_item;
-                let id = def_id.to_def_id();
+                let ImplItem { ident, owner_id, kind, .. } = impl_item;
+                let id = owner_id.to_def_id();
                 let attrs = ctxt.tcx.hir().attrs(impl_item.hir_id());
                 let vattrs = get_verifier_attrs(attrs).expect("get_verifier_attrs");
                 if vattrs.external {
@@ -1636,25 +1636,25 @@ fn erase_variant_data<'tcx>(
         let mode = get_mode(Mode::Exec, get_attrs(f_did));
         if mode == Mode::Spec { Box::new(TypX::Phantom(typ)) } else { typ }
     };
-    match variant.ctor_kind {
-        CtorKind::Fn => {
+    match variant.ctor_kind() {
+        Some(CtorKind::Fn) => {
             let mut fields: Vec<Typ> = Vec::new();
             for field in &variant.fields {
-                let typ = erase_ty(ctxt, state, ctxt.tcx.type_of(field.did));
+                let typ = erase_ty(ctxt, state, &ctxt.tcx.type_of(field.did));
                 fields.push(revise_typ(field.did, typ));
             }
             Fields::Pos(fields)
         }
-        CtorKind::Fictive => {
+        None => {
             let mut fields: Vec<Field> = Vec::new();
             for field in &variant.fields {
-                let name = state.local(field.ident.to_string());
-                let typ = erase_ty(ctxt, state, ctxt.tcx.type_of(field.did));
+                let name = state.local(field.ident(ctxt.tcx).to_string());
+                let typ = erase_ty(ctxt, state, &ctxt.tcx.type_of(field.did));
                 fields.push(Field { name, typ: revise_typ(field.did, typ) });
             }
             Fields::Named(fields)
         }
-        CtorKind::Const => {
+        Some(CtorKind::Const) => {
             assert!(variant.fields.len() == 0);
             Fields::Pos(vec![])
         }
@@ -1705,8 +1705,8 @@ fn erase_mir_datatype<'tcx>(ctxt: &Context<'tcx>, state: &mut State, id: DefId) 
         erase_datatype(ctxt, state, span, id, datatype);
     } else if adt_def.is_enum() {
         let mut variants: Vec<(Id, Fields)> = Vec::new();
-        for variant in adt_def.variants.iter() {
-            let name = state.variant(variant.ident.to_string());
+        for variant in adt_def.variants().iter() {
+            let name = state.variant(variant.ident(ctxt.tcx).to_string());
             let fields = erase_variant_data(ctxt, state, variant);
             variants.push((name, fields));
         }
@@ -1788,12 +1788,12 @@ pub(crate) fn gen_check_tracked_lifetimes<'tcx>(
         }
     }
     for owner in krate.owners.iter() {
-        if let Some(owner) = owner {
+        if let MaybeOwner::Owner(owner) = owner {
             match owner.node() {
                 OwnerNode::Item(item) => match &item.kind {
                     ItemKind::Impl(Impl { of_trait: Some(trait_ref), .. }) => {
                         if Some(trait_ref.path.res.def_id()) == tcx.lang_items().copy_trait() {
-                            add_copy_type(tcx, item.def_id.to_def_id(), &mut ctxt.copy_types);
+                            add_copy_type(tcx, item.owner_id.to_def_id(), &mut ctxt.copy_types);
                         }
                     }
                     _ => {}
@@ -1804,7 +1804,7 @@ pub(crate) fn gen_check_tracked_lifetimes<'tcx>(
     }
 
     for owner in krate.owners.iter() {
-        if let Some(owner) = owner {
+        if let MaybeOwner::Owner(owner) = owner {
             match owner.node() {
                 OwnerNode::Item(item) => {
                     let attrs = tcx.hir().attrs(item.hir_id());
@@ -1815,7 +1815,7 @@ pub(crate) fn gen_check_tracked_lifetimes<'tcx>(
                     if vattrs.is_variant.is_some() || vattrs.get_variant.is_some() {
                         continue;
                     }
-                    let id = item.def_id.to_def_id();
+                    let id = item.owner_id.to_def_id();
                     match &item.kind {
                         ItemKind::Use { .. } => {}
                         ItemKind::ExternCrate { .. } => {}
