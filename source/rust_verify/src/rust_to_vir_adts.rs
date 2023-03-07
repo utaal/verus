@@ -102,7 +102,7 @@ pub fn check_item_struct<'tcx>(
     }
 
     let vattrs = get_verifier_attrs(attrs)?;
-    let def_id = id.def_id.to_def_id();
+    let def_id = id.owner_id.to_def_id();
     let typ_params =
         Arc::new(check_generics_bounds(ctxt.tcx, generics, vattrs.external_body, def_id)?);
     let name = hack_get_def_name(ctxt.tcx, def_id);
@@ -129,12 +129,13 @@ pub fn check_item_struct<'tcx>(
     Ok(())
 }
 
-pub fn get_mid_variant_def_by_name<'a>(
-    adt_def: &'a rustc_middle::ty::AdtDef,
+pub fn get_mid_variant_def_by_name<'tcx>(
+    ctxt: &Context<'tcx>,
+    adt_def: &'tcx rustc_middle::ty::AdtDef,
     variant_name: &str,
-) -> &'a rustc_middle::ty::VariantDef {
-    for variant_def in adt_def.variants.iter() {
-        if variant_def.ident.name.as_str() == variant_name {
+) -> &'tcx rustc_middle::ty::VariantDef {
+    for variant_def in adt_def.variants().iter() {
+        if variant_def.ident(ctxt.tcx).name.as_str() == variant_name {
             return variant_def;
         }
     }
@@ -156,7 +157,7 @@ pub fn check_item_enum<'tcx>(
     assert!(adt_def.is_enum());
 
     let vattrs = get_verifier_attrs(attrs)?;
-    let def_id = id.def_id.to_def_id();
+    let def_id = id.owner_id.to_def_id();
     let typ_params =
         Arc::new(check_generics_bounds(ctxt.tcx, generics, vattrs.external_body, def_id)?);
     let path = def_id_to_vir_path(ctxt.tcx, def_id);
@@ -165,7 +166,7 @@ pub fn check_item_enum<'tcx>(
         .iter()
         .map(|variant| {
             let variant_name = &variant.ident.as_str();
-            let variant_def = get_mid_variant_def_by_name(&adt_def, variant_name);
+            let variant_def = get_mid_variant_def_by_name(ctxt, &adt_def, variant_name);
             let variant_name = str_ident(variant_name);
             let field_defs = variant_def.fields.iter();
             check_variant_data(ctxt, module_path, &variant_name, &variant.data, true, field_defs)

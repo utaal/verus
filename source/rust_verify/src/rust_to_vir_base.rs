@@ -111,8 +111,7 @@ pub(crate) fn fn_item_hir_id_to_self_def_id<'tcx>(
     tcx: TyCtxt<'tcx>,
     hir_id: HirId,
 ) -> Option<DefId> {
-    let parent_id = tcx.hir().get_parent_node(hir_id);
-    let parent_node = tcx.hir().get(parent_id);
+    let parent_node = tcx.hir().get_parent(hir_id);
     match parent_node {
         rustc_hir::Node::Item(rustc_hir::Item {
             kind: rustc_hir::ItemKind::Impl(impll), ..
@@ -130,12 +129,11 @@ pub(crate) fn fn_item_hir_id_to_self_def_id<'tcx>(
 }
 
 pub(crate) fn fn_item_hir_id_to_self_path<'tcx>(tcx: TyCtxt<'tcx>, hir_id: HirId) -> Option<Path> {
-    let parent_id = tcx.hir().get_parent_node(hir_id);
-    let parent_node = tcx.hir().get(parent_id);
+    let parent_node = tcx.hir().get_parent(hir_id);
     match parent_node {
         rustc_hir::Node::Item(rustc_hir::Item {
             kind: rustc_hir::ItemKind::Impl(impll),
-            def_id,
+            owner_id,
             ..
         }) => match &impll.self_ty.kind {
             rustc_hir::TyKind::Path(QPath::Resolved(
@@ -146,7 +144,7 @@ pub(crate) fn fn_item_hir_id_to_self_path<'tcx>(tcx: TyCtxt<'tcx>, hir_id: HirId
                 // To handle cases like [T] which are not syntactically datatypes
                 // but converted into VIR datatypes.
 
-                let self_ty = tcx.type_of(def_id.to_def_id());
+                let self_ty = tcx.type_of(owner_id.to_def_id());
                 let vir_ty = mid_ty_to_vir_ghost(tcx, self_ty, true, false).0;
                 match &*vir_ty {
                     TypX::Datatype(p, _typ_args) => Some(p.clone()),
