@@ -461,11 +461,11 @@ pub(crate) fn mid_ty_const_to_vir<'tcx>(
     use rustc_middle::mir::interpret::{ConstValue, Scalar};
     use rustc_middle::ty::ConstKind;
 
-    let cnst = match cnst.val {
-        ConstKind::Unevaluated(unevaluated) => cnst.eval(tcx, tcx.param_env(unevaluated.def.did)),
+    let cnst = match cnst.kind() {
+        ConstKind::Unevaluated(unevaluated) => &cnst.eval(tcx, tcx.param_env(unevaluated.def.did)),
         _ => cnst,
     };
-    match cnst.val {
+    match cnst.kind() {
         ConstKind::Param(param) => Arc::new(TypX::TypParam(Arc::new(param.name.to_string()))),
         ConstKind::Value(ConstValue::Scalar(Scalar::Int(i))) => {
             let c = num_bigint::BigInt::from(i.assert_bits(i.size()));
