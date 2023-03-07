@@ -39,7 +39,7 @@ fn check_variant_data<'tcx>(
                         ident_binder(
                             &str_ident(&field.ident.as_str()),
                             &(
-                                mid_ty_to_vir(ctxt.tcx, field_ty, false),
+                                mid_ty_to_vir(ctxt.tcx, &field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
                                 mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
                             ),
@@ -63,7 +63,7 @@ fn check_variant_data<'tcx>(
                         ident_binder(
                             &positional_field_ident(i),
                             &(
-                                mid_ty_to_vir(ctxt.tcx, field_ty, false),
+                                mid_ty_to_vir(ctxt.tcx, &field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
                                 mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
                             ),

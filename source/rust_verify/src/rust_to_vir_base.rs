@@ -12,7 +12,7 @@ use rustc_middle::ty::GenericParamDefKind;
 use rustc_middle::ty::ProjectionPredicate;
 use rustc_middle::ty::Projection;
 use rustc_middle::ty::{AdtDef, TyCtxt, TyKind};
-use rustc_middle::ty::{BoundConstness, ImplPolarity, PredicateKind, TraitPredicate};
+use rustc_middle::ty::{BoundConstness, ImplPolarity, PredicateKind, TraitPredicate, Clause};
 use rustc_middle::ty::Visibility;
 use rustc_span::def_id::{DefId, LOCAL_CRATE};
 use rustc_span::symbol::{kw, Ident};
@@ -448,10 +448,10 @@ pub(crate) fn mid_ty_to_vir_datatype<'tcx>(
 
 pub(crate) fn mid_ty_to_vir<'tcx>(
     tcx: TyCtxt<'tcx>,
-    ty: rustc_middle::ty::Ty<'tcx>,
+    ty: &rustc_middle::ty::Ty<'tcx>,
     allow_mut_ref: bool,
 ) -> Typ {
-    mid_ty_to_vir_ghost(tcx, &ty, false, allow_mut_ref).0
+    mid_ty_to_vir_ghost(tcx, ty, false, allow_mut_ref).0
 }
 
 pub(crate) fn mid_ty_const_to_vir<'tcx>(
@@ -510,7 +510,7 @@ pub(crate) fn _ty_resolved_path_to_debug_path(_tcx: TyCtxt<'_>, ty: &Ty) -> Stri
 }
 
 pub(crate) fn typ_of_node<'tcx>(bctx: &BodyCtxt<'tcx>, id: &HirId, allow_mut_ref: bool) -> Typ {
-    mid_ty_to_vir(bctx.ctxt.tcx, bctx.types.node_type(*id), allow_mut_ref)
+    mid_ty_to_vir(bctx.ctxt.tcx, &bctx.types.node_type(*id), allow_mut_ref)
 }
 
 pub(crate) fn typ_of_node_expect_mut_ref<'tcx>(
@@ -520,7 +520,7 @@ pub(crate) fn typ_of_node_expect_mut_ref<'tcx>(
 ) -> Result<Typ, VirErr> {
     let ty = bctx.types.node_type(*id);
     if let TyKind::Ref(_, _tys, rustc_ast::Mutability::Mut) = ty.kind() {
-        Ok(mid_ty_to_vir(bctx.ctxt.tcx, ty, true))
+        Ok(mid_ty_to_vir(bctx.ctxt.tcx, &ty, true))
     } else {
         err_span_str(span, "a mutable reference is expected here")
     }
@@ -689,14 +689,14 @@ pub(crate) fn check_generics_bounds<'tcx>(
     for (predicate, span) in predicates.predicates.iter() {
         // REVIEW: rustc docs say that skip_binder is "dangerous"
         match predicate.kind().skip_binder() {
-            PredicateKind::RegionOutlives(_) | PredicateKind::TypeOutlives(_) => {
+            PredicateKind::Clause(Clause::RegionOutlives(_) | Clause::TypeOutlives(_)) => {
                 // can ignore lifetime bounds
             }
-            PredicateKind::Trait(TraitPredicate {
+            PredicateKind::Clause(Clause::Trait(TraitPredicate {
                 trait_ref,
                 constness: BoundConstness::NotConst,
                 polarity: ImplPolarity::Positive,
-            }) => {
+            })) => {
                 let substs = trait_ref.substs;
 
                 // For a bound like `T: SomeTrait<X, Y, Z>`, then:
@@ -775,10 +775,8 @@ pub(crate) fn check_generics_bounds<'tcx>(
                     }
                 };
             }
-            PredicateKind::Projection(ProjectionPredicate {
-                projection_ty: Projection { substs: _, item_def_id },
-                ty: _,
-            }) => {
+            PredicateKind::Clause(Clause::Projection(pred)) => {
+                let item_def_id = pred.projection_ty.def_id;
                 // The trait bound `F: Fn(A) -> B`
                 // is really more like a trait bound `F: Fn<A, Output=B>`
                 // The trait bounds that use = are called projections.
@@ -833,7 +831,7 @@ pub(crate) fn check_generics_bounds<'tcx>(
             );
         }
         let strictly_positive = !neg; // strictly_positive is the default
-        let GenericParam { hir_id: _, name: _, bounds: _, span, pure_wrt_drop, kind } = hir_param;
+        let GenericParam { hir_id: _, name: _, span, pure_wrt_drop, kind, def_id: _, colon_span: _ } = hir_param;
 
         unsupported_err_unless!(!pure_wrt_drop, *span, "generic pure_wrt_drop");
 
@@ -854,7 +852,6 @@ pub(crate) fn check_generics_bounds<'tcx>(
             | GenericParamDefKind::Type {
                 has_default: false,
                 synthetic: true | false,
-                object_lifetime_default: _,
             } => {
                 // trait/function bounds
                 let ident = Arc::new(generic_param_def_to_vir_name(mid_param));

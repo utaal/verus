@@ -53,12 +53,10 @@ pub(crate) fn pat_to_mut_var<'tcx>(pat: &Pat) -> (bool, String) {
     unsupported_unless!(default_binding_modes, "default_binding_modes");
     match kind {
         PatKind::Binding(annotation, id, ident, pat) => {
-            let mutable = match annotation {
-                BindingAnnotation::Unannotated => false,
-                BindingAnnotation::Mutable => true,
-                _ => {
-                    unsupported!(format!("binding annotation {:?}", annotation))
-                }
+            let BindingAnnotation(_, mutability) = annotation;
+            let mutable = match mutability {
+                rustc_hir::Mutability::Mut => true,
+                rustc_hir::Mutability::Not => false,
             };
             match pat {
                 None => {}
@@ -126,7 +124,7 @@ fn closure_ret_typ<'tcx>(bctx: &BodyCtxt<'tcx>, expr: &Expr<'tcx>) -> Typ {
         TyKind::Closure(_def, substs) => {
             let sig = substs.as_closure().sig();
             let t = sig.output().skip_binder();
-            mid_ty_to_vir(bctx.ctxt.tcx, t, false /* allow_mut_ref */)
+            mid_ty_to_vir(bctx.ctxt.tcx, &t, false /* allow_mut_ref */)
         }
         _ => panic!("closure_param_types expected Closure type"),
     }

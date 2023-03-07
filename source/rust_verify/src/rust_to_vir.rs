@@ -202,7 +202,7 @@ fn check_item<'tcx>(
             }
 
             let self_ty = ctxt.tcx.type_of(item.owner_id.to_def_id());
-            let self_typ = mid_ty_to_vir(ctxt.tcx, self_ty, false);
+            let self_typ = mid_ty_to_vir(ctxt.tcx, &self_ty, false);
 
             let (self_path, datatype_typ_args) = match &*self_typ {
                 TypX::Datatype(p, typ_args) => (p.clone(), typ_args.clone()),
@@ -229,7 +229,7 @@ fn check_item<'tcx>(
                     .substs
                     .types()
                     .skip(1)
-                    .map(|ty| mid_ty_to_vir(ctxt.tcx, ty, false))
+                    .map(|ty| mid_ty_to_vir(ctxt.tcx, &ty, false))
                     .collect();
                 let path = def_id_to_vir_path(ctxt.tcx, path.res.def_id());
                 (path, Arc::new(types))
@@ -364,7 +364,7 @@ fn check_item<'tcx>(
             }
 
             let mid_ty = ctxt.tcx.type_of(def_id);
-            let vir_ty = mid_ty_to_vir(ctxt.tcx, mid_ty, false);
+            let vir_ty = mid_ty_to_vir(ctxt.tcx, &mid_ty, false);
 
             crate::rust_to_vir_func::check_item_const(
                 ctxt,
