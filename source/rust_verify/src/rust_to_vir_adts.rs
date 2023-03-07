@@ -32,7 +32,7 @@ fn check_variant_data<'tcx>(
                 .iter()
                 .zip(field_defs)
                 .map(|(field, field_def)| {
-                    assert!(field.ident.name == field_def.ident.name);
+                    assert!(field.ident.name == field_def.ident(ctxt.tcx).name);
                     let field_ty = ctxt.tcx.type_of(field_def.did);
 
                     (
@@ -41,22 +41,22 @@ fn check_variant_data<'tcx>(
                             &(
                                 mid_ty_to_vir(ctxt.tcx, field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
-                                mk_visibility(&Some(module_path.clone()), &field.vis, !in_enum),
+                                mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
                             ),
                         ),
-                        is_visibility_private(&field.vis.node, !in_enum),
+                        is_visibility_private(ctxt, field.def_id.to_def_id(), !in_enum),
                     )
                 })
                 .unzip();
             (Arc::new(vir_fields), field_private.into_iter().any(|x| x))
         }
-        VariantData::Tuple(fields, _variant_id) => {
+        VariantData::Tuple(fields, _variant_id, _local_def_id) => {
             let (vir_fields, field_private): (Vec<_>, Vec<_>) = fields
                 .iter()
                 .zip(field_defs)
                 .enumerate()
                 .map(|(i, (field, field_def))| {
-                    assert!(field.ident.name == field_def.ident.name);
+                    assert!(field.ident.name == field_def.ident(ctxt.tcx).name);
                     let field_ty = ctxt.tcx.type_of(field_def.did);
 
                     (
@@ -65,16 +65,16 @@ fn check_variant_data<'tcx>(
                             &(
                                 mid_ty_to_vir(ctxt.tcx, field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
-                                mk_visibility(&Some(module_path.clone()), &field.vis, !in_enum),
+                                mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
                             ),
                         ),
-                        is_visibility_private(&field.vis.node, !in_enum),
+                        is_visibility_private(ctxt, field.def_id.to_def_id(), !in_enum),
                     )
                 })
                 .unzip();
             (Arc::new(vir_fields), field_private.into_iter().any(|x| x))
         }
-        VariantData::Unit(_vairant_id) => (Arc::new(vec![]), false),
+        VariantData::Unit(_variant_id, _local_def_id) => (Arc::new(vec![]), false),
     };
     (ident_binder(name, &vir_fields), one_field_private)
 }
@@ -95,7 +95,7 @@ pub fn check_item_struct<'tcx>(
 
     let is_strslice_struct = ctxt
         .tcx
-        .is_diagnostic_item(Symbol::intern("pervasive::string::StrSlice"), id.def_id.to_def_id());
+        .is_diagnostic_item(Symbol::intern("pervasive::string::StrSlice"), id.owner_id.to_def_id());
 
     if is_strslice_struct {
         return Ok(());
