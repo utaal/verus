@@ -30,7 +30,6 @@ pub mod debugger;
 pub mod def;
 pub mod driver;
 pub mod erase;
-mod erase_rewrite;
 pub mod file_loader;
 mod import_export;
 mod lifetime;

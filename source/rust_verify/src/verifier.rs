@@ -1523,22 +1523,6 @@ impl std::io::Write for DiagnosticOutputBuffer {
     }
 }
 
-struct Rewrite {}
-
-impl rustc_lint::FormalVerifierRewrite for Rewrite {
-    fn rewrite_crate(
-        &mut self,
-        krate: &rustc_ast::ast::Crate,
-        _next_node_id: &mut dyn FnMut() -> rustc_ast::ast::NodeId,
-    ) -> rustc_ast::ast::Crate {
-        use crate::rustc_ast::mut_visit::MutVisitor;
-        let mut krate = krate.clone();
-        let mut visitor = crate::erase_rewrite::Visitor::new();
-        visitor.visit_crate(&mut krate);
-        krate
-    }
-}
-
 impl Verifier {
     fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
         if let Some(target) = &self.test_capture_output {
