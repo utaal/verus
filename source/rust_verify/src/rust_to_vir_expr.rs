@@ -27,7 +27,7 @@ use rustc_hir::{
 
 use crate::rust_intrinsics_to_vir::int_intrinsic_constant_to_vir;
 use rustc_middle::ty::subst::GenericArgKind;
-use rustc_middle::ty::{PredicateKind, TyCtxt, TyKind};
+use rustc_middle::ty::{PredicateKind, TyCtxt, TyKind, Clause};
 use rustc_span::def_id::DefId;
 use rustc_span::source_map::Spanned;
 use rustc_span::symbol::Symbol;
@@ -137,9 +137,9 @@ fn extract_ensures<'tcx>(
     let expr = skip_closure_coercion(bctx, expr);
     let tcx = bctx.ctxt.tcx;
     match &expr.kind {
-        ExprKind::Closure(_, _fn_decl, body_id, _, _) => {
+        ExprKind::Closure(closure) => {
             let typs: Vec<Typ> = closure_param_typs(bctx, expr);
-            let body = tcx.hir().body(*body_id);
+            let body = tcx.hir().body(closure.body);
             let xs: Vec<String> = body.params.iter().map(|param| pat_to_var(param.pat)).collect();
             let expr = &body.value;
             let args = vec_map_result(&extract_array(expr), |e| get_ensures_arg(bctx, e))?;
@@ -166,8 +166,8 @@ fn extract_quant<'tcx>(
     let expr = skip_closure_coercion(bctx, expr);
     let tcx = bctx.ctxt.tcx;
     match &expr.kind {
-        ExprKind::Closure(_, _fn_decl, body_id, _, _) => {
-            let body = tcx.hir().body(*body_id);
+        ExprKind::Closure(closure) => {
+            let body = tcx.hir().body(closure.body);
             let typs = closure_param_typs(bctx, expr);
             assert!(typs.len() == body.params.len());
             let binders: Vec<Binder<Typ>> = body
@@ -200,8 +200,8 @@ fn extract_assert_forall_by<'tcx>(
     let expr = skip_closure_coercion(bctx, expr);
     let tcx = bctx.ctxt.tcx;
     match &expr.kind {
-        ExprKind::Closure(_, _fn_decl, body_id, _, _) => {
-            let body = tcx.hir().body(*body_id);
+        ExprKind::Closure(closure) => {
+            let body = tcx.hir().body(closure.body);
             let typs = closure_param_typs(bctx, expr);
             assert!(body.params.len() == typs.len());
             let binders: Vec<Binder<Typ>> = body
@@ -251,8 +251,8 @@ fn extract_choose<'tcx>(
     let expr = skip_closure_coercion(bctx, expr);
     let tcx = bctx.ctxt.tcx;
     match &expr.kind {
-        ExprKind::Closure(_, _fn_decl, body_id, _, _) => {
-            let closure_body = tcx.hir().body(*body_id);
+        ExprKind::Closure(closure) => {
+            let closure_body = tcx.hir().body(closure.body);
             let mut params: Vec<Binder<Typ>> = Vec::new();
             let mut vars: Vec<vir::ast::Expr> = Vec::new();
             let typs = closure_param_typs(bctx, expr);
@@ -960,7 +960,7 @@ fn fn_call_to_vir<'tcx>(
         if let ExprKind::Path(QPath::Resolved(None, rustc_hir::Path { res: Res::Local(id), .. })) =
             &args[0].kind
         {
-            if let Node::Binding(pat) = tcx.hir().get(*id) {
+            if let Node::Pat(pat) = tcx.hir().get(*id) {
                 let typ = typ_of_node_expect_mut_ref(bctx, &expr.hir_id, args[0].span)?;
                 return Ok(bctx.spanned_typed_new(
                     expr.span,
@@ -1615,7 +1615,7 @@ fn fn_call_to_vir<'tcx>(
         // filter out the Fn type parameters
         let mut fn_params: Vec<Ident> = Vec::new();
         for (x, _) in tcx.predicates_of(f).predicates {
-            if let PredicateKind::Trait(t) = x.kind().skip_binder() {
+            if let PredicateKind::Clause(Clause::Trait(t)) = x.kind().skip_binder() {
                 let name = path_as_rust_name(&def_id_to_vir_path(tcx, t.trait_ref.def_id));
                 if name == "core::ops::function::Fn" {
                     for s in t.trait_ref.substs {
