@@ -463,8 +463,8 @@ pub(crate) fn mid_ty_const_to_vir<'tcx>(
     use rustc_middle::ty::ConstKind;
 
     let cnst = match cnst.kind() {
-        ConstKind::Unevaluated(unevaluated) => &cnst.eval(tcx, tcx.param_env(unevaluated.def.did)),
-        _ => cnst,
+        ConstKind::Unevaluated(unevaluated) => cnst.eval(tcx, tcx.param_env(unevaluated.def.did)),
+        _ => *cnst,
     };
     match cnst.kind() {
         ConstKind::Param(param) => Arc::new(TypX::TypParam(Arc::new(param.name.to_string()))),

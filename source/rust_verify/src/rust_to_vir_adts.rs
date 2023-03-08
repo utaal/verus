@@ -15,14 +15,16 @@ use vir::ast::{DatatypeTransparency, DatatypeX, Ident, KrateX, Mode, Path, Varia
 use vir::ast_util::ident_binder;
 use vir::def::positional_field_ident;
 
-fn check_variant_data<'tcx>(
+fn check_variant_data<'tcx, 'fd>(
     ctxt: &Context<'tcx>,
     module_path: &Path,
     name: &Ident,
     variant_data: &'tcx VariantData<'tcx>,
     in_enum: bool,
-    field_defs: impl Iterator<Item = &'tcx rustc_middle::ty::FieldDef>,
-) -> (Variant, bool) {
+    field_defs: impl Iterator<Item = &'fd rustc_middle::ty::FieldDef>,
+) -> (Variant, bool)
+    where 'tcx: 'fd
+{
     // TODO handle field visibility; does rustc_middle::ty::Visibility have better visibility
     // information than hir?
     let (vir_fields, one_field_private) = match variant_data {
@@ -89,7 +91,7 @@ pub fn check_item_struct<'tcx>(
     attrs: &[Attribute],
     variant_data: &'tcx VariantData<'tcx>,
     generics: &'tcx Generics<'tcx>,
-    adt_def: &'tcx rustc_middle::ty::AdtDef,
+    adt_def: &'_ rustc_middle::ty::AdtDef,
 ) -> Result<(), VirErr> {
     assert!(adt_def.is_struct());
 
@@ -129,11 +131,13 @@ pub fn check_item_struct<'tcx>(
     Ok(())
 }
 
-pub fn get_mid_variant_def_by_name<'tcx>(
+pub fn get_mid_variant_def_by_name<'tcx, 'df>(
     ctxt: &Context<'tcx>,
-    adt_def: &'tcx rustc_middle::ty::AdtDef,
+    adt_def: &'df rustc_middle::ty::AdtDef,
     variant_name: &str,
-) -> &'tcx rustc_middle::ty::VariantDef {
+) -> &'df rustc_middle::ty::VariantDef
+    where 'tcx: 'df
+{
     for variant_def in adt_def.variants().iter() {
         if variant_def.ident(ctxt.tcx).name.as_str() == variant_name {
             return variant_def;
@@ -152,7 +156,7 @@ pub fn check_item_enum<'tcx>(
     attrs: &[Attribute],
     enum_def: &'tcx EnumDef<'tcx>,
     generics: &'tcx Generics<'tcx>,
-    adt_def: &'tcx rustc_middle::ty::AdtDef,
+    adt_def: &rustc_middle::ty::AdtDef,
 ) -> Result<(), VirErr> {
     assert!(adt_def.is_enum());
 

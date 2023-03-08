@@ -1,14 +1,6 @@
 #![feature(rustc_private)]
 
-extern crate rustc_ast;
-extern crate rustc_driver;
-extern crate rustc_errors;
-extern crate rustc_hir;
-extern crate rustc_interface;
-extern crate rustc_middle;
-extern crate rustc_mir_build;
-extern crate rustc_span;
-extern crate rustc_typeck;
+extern crate rustc_driver; // TODO can we remove this?
 
 #[cfg(target_family = "windows")]
 fn os_setup() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,7 +24,7 @@ pub fn main() {
     let total_time_0 = std::time::Instant::now();
 
     let _ = os_setup();
-    rustc_driver::init_env_logger("RUSTVERIFY_LOG");
+    verus_rustc_driver::init_env_logger("RUSTVERIFY_LOG");
 
     let mut args = std::env::args();
     let program = args.next().unwrap();
