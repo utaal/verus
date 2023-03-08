@@ -27,9 +27,8 @@ pub(crate) fn err_air_span(span: Span) -> air::ast::Span {
 
 #[derive(Debug, Clone)]
 struct ExternSourceFile {
-    original_start_pos: BytePos,
-    original_end_pos: BytePos,
     start_pos: BytePos,
+    end_pos: BytePos,
 }
 
 struct CrateInfo {
@@ -52,15 +51,13 @@ impl SpanContextX {
     ) -> SpanContext {
         let mut imported_crates = HashMap::new();
         for source_file in source_map.files().iter() {
-            if let ExternalSource::Foreign { original_start_pos, original_end_pos, .. } =
+            if let ExternalSource::Foreign { .. } =
                 *source_file.external_src.borrow()
             {
                 let imported_crate = tcx.stable_crate_id(source_file.cnum).to_u64();
                 let start_pos = source_file.start_pos;
                 let end_pos = source_file.end_pos;
-                assert!(original_end_pos - original_start_pos == end_pos - start_pos);
-                let extern_source_file =
-                    ExternSourceFile { original_start_pos, original_end_pos, start_pos };
+                let extern_source_file = ExternSourceFile { start_pos, end_pos };
                 if !imported_crates.contains_key(&imported_crate) {
                     imported_crates.insert(imported_crate, CrateInfo { files: Vec::new() });
                 }
@@ -68,7 +65,7 @@ impl SpanContextX {
             }
         }
         for (_, info) in imported_crates.iter_mut() {
-            info.files.sort_by_key(|f| f.original_start_pos);
+            info.files.sort_by_key(|f| f.start_pos);
         }
         let next_span_id = std::cell::Cell::new(1);
         Arc::new(SpanContextX { local_crate, imported_crates, next_span_id })
@@ -80,15 +77,15 @@ impl SpanContextX {
         pos: BytePos,
     ) -> Option<ExternSourceFile> {
         if let Some(crate_info) = self.imported_crates.get(&imported_crate) {
-            let i = crate_info.files.binary_search_by_key(&pos, |f| f.original_start_pos);
+            let i = crate_info.files.binary_search_by_key(&pos, |f| f.start_pos);
             let i = match i {
                 Ok(i) => i,
                 Err(i) if i == 0 => return None,
                 Err(i) => i - 1,
             };
             let f = crate_info.files[i].clone();
-            assert!(f.original_start_pos <= pos);
-            if pos <= f.original_end_pos {
+            assert!(f.start_pos <= pos);
+            if pos <= f.end_pos {
                 return Some(f);
             }
         }
@@ -106,13 +103,12 @@ impl SpanContextX {
         // Encode as [StableCrateId, lo_hi]
         if packed.len() >= 2 {
             let crate_id = packed[0];
-            let original_lo = BytePos((packed[1] >> 32) as u32);
-            let original_hi = BytePos(packed[1] as u32);
-            if let Some(f) = self.pos_to_extern_source_file(crate_id, original_lo) {
-                assert!(f.original_start_pos <= original_lo);
-                if original_lo <= original_hi && original_hi <= f.original_end_pos {
-                    let lo = original_lo - f.original_start_pos + f.start_pos;
-                    let hi = original_hi - f.original_start_pos + f.start_pos;
+            let lo = BytePos((packed[1] >> 32) as u32);
+            let hi = BytePos(packed[1] as u32);
+            if let Some(f) = self.pos_to_extern_source_file(crate_id, lo) {
+                if lo <= hi && hi <= f.end_pos {
+                    let lo = lo + f.start_pos;
+                    let hi = hi + f.start_pos;
                     let ctxt = rustc_span::SyntaxContext::root();
                     return Some(SpanData { lo, hi, ctxt, parent: None }.span());
                 }

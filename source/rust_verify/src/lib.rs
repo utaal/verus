@@ -8,6 +8,7 @@ extern crate verus_rustc_driver;
 extern crate rustc_errors;
 extern crate rustc_error_messages;
 extern crate rustc_hir;
+extern crate rustc_hir_analysis;
 extern crate rustc_hir_pretty;
 extern crate rustc_infer;
 extern crate verus_rustc_interface;

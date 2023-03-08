@@ -71,11 +71,10 @@ impl Diagnostics for Reporter<'_> {
             }
         }
 
-        use MessageLevel::*;
         match level {
-            Note => self.compiler_diagnostics.span_note_without_error(multispan, &msg.note),
-            Warning => self.compiler_diagnostics.span_warn(multispan, &msg.note),
-            Error => self.compiler_diagnostics.span_err(multispan, &msg.note),
+            MessageLevel::Note => self.compiler_diagnostics.span_note_without_error(multispan, &msg.note),
+            MessageLevel::Warning => self.compiler_diagnostics.span_warn(multispan, &msg.note),
+            MessageLevel::Error => { self.compiler_diagnostics.span_err(multispan, &msg.note); },
         }
     }
 }
@@ -1356,9 +1355,9 @@ impl Verifier {
         crate_name: String,
     ) -> Result<bool, VirErr> {
         let autoviewed_call_typs = Arc::new(std::sync::Mutex::new(HashMap::new()));
-        match rustc_typeck::check_crate(tcx) {
+        match rustc_hir_analysis::check_crate(tcx) {
             Ok(()) => {}
-            Err(/* TODO */ ()) => {
+            Err(ErrorGuaranteed) => {
                 return Ok(false);
             }
         }
@@ -1379,8 +1378,8 @@ impl Verifier {
                 .owners
                 .iter()
                 .filter_map(|oi| {
-                    oi.as_ref().and_then(|o| {
-                        if let OwnerNode::Crate(c) = o.node() { Some(c.inner) } else { None }
+                    oi.as_owner().as_ref().and_then(|o| {
+                        if let OwnerNode::Crate(c) = o.node() { Some(c.spans.inner_span) } else { None }
                     })
                 })
                 .next()
@@ -1474,7 +1473,7 @@ impl Verifier {
         check_crate_result?;
         let (erasure_modes, inferred_modes) = vir::modes::check_crate(
             &vir_crate,
-            self.args.erasure == crate::config::Erasure::Macro,
+            true
         )?;
         let vir_crate = vir::traits::demote_foreign_traits(&vir_crate)?;
 
@@ -1526,7 +1525,7 @@ impl std::io::Write for DiagnosticOutputBuffer {
 impl Verifier {
     fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
         if let Some(target) = &self.test_capture_output {
-            config.diagnostic_output = todo!();
+            // TODO config.diagnostic_output = todo!();
             // TODO rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
             // TODO     output: target.clone(),
             // TODO }));
