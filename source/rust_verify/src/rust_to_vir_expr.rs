@@ -1620,7 +1620,7 @@ fn fn_call_to_vir<'tcx>(
                 if name == "core::ops::function::Fn" {
                     for s in t.trait_ref.substs {
                         if let GenericArgKind::Type(ty) = s.unpack() {
-                            if let TypX::TypParam(x) = &*mid_ty_to_vir(tcx, ty, false) {
+                            if let TypX::TypParam(x) = &*mid_ty_to_vir(tcx, &ty, false) {
                                 fn_params.push(x.clone());
                             }
                         }
@@ -1633,11 +1633,11 @@ fn fn_call_to_vir<'tcx>(
         for typ_arg in node_substs {
             match typ_arg.unpack() {
                 GenericArgKind::Type(ty) => {
-                    typ_args.push(mid_ty_to_vir(tcx, ty, false));
+                    typ_args.push(mid_ty_to_vir(tcx, &ty, false));
                 }
                 GenericArgKind::Lifetime(_) => {}
                 GenericArgKind::Const(cnst) => {
-                    typ_args.push(crate::rust_to_vir_base::mid_ty_const_to_vir(tcx, cnst));
+                    typ_args.push(crate::rust_to_vir_base::mid_ty_const_to_vir(tcx, &cnst));
                 }
             }
         }
@@ -1662,7 +1662,7 @@ pub(crate) fn datatype_variant_of_res_pop_count<'tcx>(
 ) -> (vir::ast::Path, Ident) {
     let variant = tcx.expect_variant_res(*res);
     let vir_path = datatype_of_path(def_id_to_vir_path(tcx, res.def_id()), pop_count);
-    let variant_name = str_ident(&variant.ident.as_str());
+    let variant_name = str_ident(&variant.ident(tcx).as_str());
     (vir_path, variant_name)
 }
 
@@ -1738,10 +1738,10 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
     unsupported_err_unless!(pat.default_binding_modes, pat.span, "complex pattern");
     let pattern = match &pat.kind {
         PatKind::Wild => PatternX::Wildcard,
-        PatKind::Binding(BindingAnnotation::Unannotated, canonical, x, None) => {
+        PatKind::Binding(BindingAnnotation(_, Mutability::Not), canonical, x, None) => {
             PatternX::Var { name: Arc::new(local_to_var(x, canonical.local_id)), mutable: false }
         }
-        PatKind::Binding(BindingAnnotation::Mutable, canonical, x, None) => {
+        PatKind::Binding(BindingAnnotation(_, Mutability::Mut), canonical, x, None) => {
             PatternX::Var { name: Arc::new(local_to_var(x, canonical.local_id)), mutable: true }
         }
         PatKind::Path(QPath::Resolved(
@@ -1761,7 +1761,7 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
             let (vir_path, variant_name) = datatype_variant_of_res(tcx, res, true);
             PatternX::Constructor(vir_path, variant_name, Arc::new(vec![]))
         }
-        PatKind::Tuple(pats, None) => {
+        PatKind::Tuple(pats, dot_dot_pos) if dot_dot_pos.as_opt_usize().is_none() => {
             let mut patterns: Vec<vir::ast::Pattern> = Vec::new();
             for pat in pats.iter() {
                 patterns.push(pattern_to_vir(bctx, pat)?);
@@ -1785,8 +1785,8 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
                 },
             ),
             pats,
-            None,
-        ) => {
+            dot_dot_pos,
+        ) if dot_dot_pos.as_opt_usize().is_none() => {
             let (vir_path, variant_name) =
                 datatype_variant_of_res(tcx, res, *ctor_of == rustc_hir::def::CtorOf::Variant);
             let mut binders: Vec<Binder<vir::ast::Pattern>> = Vec::new();
@@ -1932,7 +1932,7 @@ pub(crate) fn invariant_block_open<'a>(
                                 Pat {
                                     kind:
                                         PatKind::Binding(
-                                            BindingAnnotation::Unannotated,
+                                            BindingAnnotation(_, Mutability::Not),
                                             guard_hir,
                                             _,
                                             None,
@@ -1942,12 +1942,12 @@ pub(crate) fn invariant_block_open<'a>(
                                 },
                                 inner_pat @ Pat {
                                     kind:
-                                        PatKind::Binding(BindingAnnotation::Mutable, inner_hir, _, None),
+                                        PatKind::Binding(BindingAnnotation(_, Mutability::Mut), inner_hir, _, None),
                                     default_binding_modes: true,
                                     ..
                                 },
                             ],
-                            None,
+                            dot_dot_pos,
                         ),
                     ..
                 },
@@ -1970,7 +1970,7 @@ pub(crate) fn invariant_block_open<'a>(
                     ..
                 }),
             ..
-        }) => {
+        }) if dot_dot_pos.as_opt_usize().is_none() => {
             let f_name = vir::ast_util::path_as_vstd_name(&def_id_to_vir_path(tcx, *fun_id));
             let atomicity = if f_name == Some(BUILTIN_INV_ATOMIC_BEGIN.to_string()) {
                 InvAtomicity::Atomic
@@ -2152,7 +2152,7 @@ pub(crate) fn call_self_path(
 ) -> Option<vir::ast::Path> {
     match qpath {
         QPath::Resolved(_, _) => None,
-        QPath::LangItem(_, _) => None,
+        QPath::LangItem(_, _, _) => None,
         QPath::TypeRelative(ty, _) => match &ty.kind {
             rustc_hir::TyKind::Path(qpath) => match types.qpath_res(&qpath, ty.hir_id) {
                 rustc_hir::def::Res::Def(_, def_id) => def_id_self_to_vir_path(tcx, &None, def_id),
@@ -2508,7 +2508,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     Ok(mk_ty_clip(&expr_typ(), &e, true))
                 }
                 BinOpKind::Div | BinOpKind::Rem => {
-                    match mk_range(tc.node_type(expr.hir_id)) {
+                    match mk_range(&tc.node_type(expr.hir_id)) {
                         IntRange::Int | IntRange::Nat | IntRange::U(_) | IntRange::USize => {
                             // Euclidean division
                             Ok(mk_ty_clip(&expr_typ(), &e, true))
@@ -2534,7 +2534,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
         }
         ExprKind::Path(QPath::Resolved(None, path)) => match path.res {
             Res::Local(id) => match tcx.hir().get(id) {
-                Node::Binding(pat) => Ok(mk_expr(if modifier.addr_of {
+                Node::Pat(pat) => Ok(mk_expr(if modifier.addr_of {
                     ExprX::VarLoc(Arc::new(pat_to_var(pat)))
                 } else {
                     ExprX::Var(Arc::new(pat_to_var(pat)))
@@ -2674,29 +2674,29 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
             let lhs_modifier = is_expr_typ_mut_ref(bctx, lhs, modifier)?;
             let vir_lhs = expr_to_vir(bctx, lhs, lhs_modifier)?;
             let lhs_ty = tc.node_type(lhs.hir_id);
-            let lhs_ty = mid_ty_simplify(tcx, lhs_ty, true);
+            let lhs_ty = mid_ty_simplify(tcx, &lhs_ty, true);
             let (datatype, variant_name, field_name) = if let Some(adt_def) = lhs_ty.ty_adt_def() {
                 unsupported_err_unless!(
-                    adt_def.variants.len() == 1,
+                    adt_def.variants().len() == 1,
                     expr.span,
                     "field_of_adt_with_multiple_variants",
                     expr
                 );
-                let datatype_path = def_id_to_vir_path(tcx, adt_def.did);
-                let hir_def = bctx.ctxt.tcx.adt_def(adt_def.did);
-                let variant = hir_def.variants.iter().next().unwrap();
-                let variant_name = str_ident(&variant.ident.as_str());
-                let field_name = match variant.ctor_kind {
-                    rustc_hir::def::CtorKind::Fn => {
+                let datatype_path = def_id_to_vir_path(tcx, adt_def.did());
+                let hir_def = bctx.ctxt.tcx.adt_def(adt_def.did());
+                let variant = hir_def.variants().iter().next().unwrap();
+                let variant_name = str_ident(&variant.ident(tcx).as_str());
+                let field_name = match variant.ctor_kind() {
+                    Some(rustc_hir::def::CtorKind::Fn) => {
                         let field_idx = variant
                             .fields
                             .iter()
-                            .position(|f| f.ident.as_str() == name.as_str())
+                            .position(|f| f.ident(tcx).as_str() == name.as_str())
                             .expect("positional field not found");
                         positional_field_ident(field_idx)
                     }
-                    rustc_hir::def::CtorKind::Fictive => str_ident(&name.as_str()),
-                    rustc_hir::def::CtorKind::Const => panic!("unexpected tuple constructor"),
+                    None => str_ident(&name.as_str()),
+                    Some(rustc_hir::def::CtorKind::Const) => panic!("unexpected tuple constructor"),
                 };
                 (datatype_path, variant_name, field_name)
             } else {
