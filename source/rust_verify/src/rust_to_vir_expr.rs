@@ -22,7 +22,7 @@ use rustc_ast::{Attribute, BorrowKind, LitKind, Mutability};
 use rustc_hir::def::{DefKind, Res};
 use rustc_hir::{
     BinOpKind, BindingAnnotation, Block, Destination, Expr, ExprKind, Guard, HirId, Local,
-    LoopSource, Node, Pat, PatKind, QPath, Stmt, StmtKind, UnOp,
+    LoopSource, Node, Pat, PatKind, QPath, Stmt, StmtKind, UnOp, Let, Closure,
 };
 
 use crate::rust_intrinsics_to_vir::int_intrinsic_constant_to_vir;
@@ -2623,7 +2623,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                         None,
                         rustc_hir::Path { res: Res::Local(id), .. },
                     )) => {
-                        let not_mut = if let Node::Binding(pat) = bctx.ctxt.tcx.hir().get(*id) {
+                        let not_mut = if let Node::Pat(pat) = bctx.ctxt.tcx.hir().get(*id) {
                             let (mutable, _) = pat_to_mut_var(pat);
                             let ty = bctx.types.node_type(*id);
                             !(mutable || ty.ref_mutability() == Some(Mutability::Mut))
@@ -2631,7 +2631,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                             panic!("assignment to non-local");
                         };
                         if not_mut {
-                            match bctx.ctxt.tcx.hir().get(bctx.ctxt.tcx.hir().get_parent_node(*id))
+                            match bctx.ctxt.tcx.hir().get_parent(*id)
                             {
                                 Node::Param(_) => {
                                     err_span_str(lhs.span, "cannot assign to non-mut parameter")?
@@ -2645,7 +2645,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     ExprKind::Field(lhs, _) => {
                         let deref_ghost = mid_ty_to_vir_ghost(
                             bctx.ctxt.tcx,
-                            bctx.types.node_type(lhs.hir_id),
+                            &bctx.types.node_type(lhs.hir_id),
                             false,
                             true,
                         )
@@ -2732,7 +2732,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
         ExprKind::If(cond, lhs, rhs) => {
             let cond = cond.peel_drop_temps();
             match cond.kind {
-                ExprKind::Let(pat, expr, _let_span) => {
+                ExprKind::Let(Let { hir_id: _, pat, init: expr, ty: _, span: _ }) => {
                     // if let
                     let vir_expr = expr_to_vir(bctx, expr, modifier)?;
                     let mut vir_arms: Vec<vir::ast::Arm> = Vec::new();
@@ -2780,7 +2780,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                 let guard = match &arm.guard {
                     None => mk_expr(ExprX::Const(Constant::Bool(true))),
                     Some(Guard::If(guard)) => expr_to_vir(bctx, guard, modifier)?,
-                    Some(Guard::IfLet(_, _)) => unsupported_err!(expr.span, "Guard IfLet"),
+                    Some(Guard::IfLet(_)) => unsupported_err!(expr.span, "Guard IfLet"),
                 };
                 let body = expr_to_vir(bctx, &arm.body, modifier)?;
                 let vir_arm = ArmX { pattern, guard, body };
@@ -2925,7 +2925,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     if f_name == "std::clone::Clone::clone" {
                         assert!(all_args.len() == 1);
                         let arg_typ = bctx.types.node_type(all_args[0].hir_id);
-                        if is_type_std_rc_or_arc(bctx.ctxt.tcx, &arg_typ) {
+                        if is_type_std_rc_or_arc(bctx.ctxt.tcx, arg_typ) {
                             let arg = expr_to_vir(bctx, &all_args[0], ExprModifier::REGULAR)?;
                             let mut erasure_info = bctx.ctxt.erasure_info.borrow_mut();
                             erasure_info.resolved_calls.push((
@@ -2965,7 +2965,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                         for typ_arg in bctx.types.node_substs(expr.hir_id) {
                             match typ_arg.unpack() {
                                 GenericArgKind::Type(ty) => {
-                                    typ_args.push(mid_ty_to_vir(tcx, ty, false));
+                                    typ_args.push(mid_ty_to_vir(tcx, &ty, false));
                                 }
                                 GenericArgKind::Lifetime(_) => {}
                                 _ => unsupported_err!(
@@ -3076,7 +3076,7 @@ fn closure_to_vir<'tcx>(
     is_spec_fn: bool,
     modifier: ExprModifier,
 ) -> Result<vir::ast::Expr, VirErr> {
-    if let ExprKind::Closure(_, fn_decl, body_id, _, _) = &closure_expr.kind {
+    if let ExprKind::Closure(Closure { fn_decl, body: body_id, .. }) = &closure_expr.kind {
         unsupported_unless!(!fn_decl.c_variadic, "c_variadic");
         unsupported_unless!(
             matches!(fn_decl.implicit_self, rustc_hir::ImplicitSelfKind::None),
