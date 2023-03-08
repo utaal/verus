@@ -1555,9 +1555,9 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
         if !compiler.session().compile_status().is_ok() {
             return verus_rustc_driver::Compilation::Stop;
         }
-        let crate_name = queries.crate_name().expect("crate name").peek().clone();
+        let crate_name: String = queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO correct?
 
-        let _result = queries.global_ctxt().expect("global_ctxt").peek_mut().enter(|tcx| {
+        let _result = queries.global_ctxt().expect("global_ctxt").enter(|tcx| {
             let spans = SpanContextX::new(
                 tcx,
                 compiler.session().local_stable_crate_id(),
