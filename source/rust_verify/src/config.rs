@@ -108,7 +108,7 @@ pub fn enable_default_features_and_verus_attr(
         "register_tool",
     ] {
         rustc_args.push("-Z".to_string());
-        rustc_args.push(format!("enable_feature={}", feature));
+        rustc_args.push(format!("crate-attr=feature({})", feature));
     }
 
     rustc_args.push("-Zcrate-attr=register_tool(verus)".to_string());
