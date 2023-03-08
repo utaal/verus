@@ -11,4 +11,6 @@ members = [
   "state_machines_macros",
   "verusdoc",
   "vstd",
+  "rustc_interface",
+  "rustc_driver",
 ]

@@ -9,12 +9,13 @@ use air::context::{QueryContext, ValidityResult};
 use air::messages::{message, note, note_bare, Diagnostics, Message, MessageLabel, MessageLevel};
 use air::profiler::Profiler;
 use rustc_hir::OwnerNode;
-use rustc_interface::interface::Compiler;
+use verus_rustc_interface::interface::Compiler;
 
 use num_format::{Locale, ToFormattedString};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::source_map::SourceMap;
-use rustc_span::{CharPos, FileName, MultiSpan, Span};
+use rustc_span::{CharPos, FileName, Span};
+use rustc_error_messages::MultiSpan;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -70,11 +71,10 @@ impl Diagnostics for Reporter<'_> {
             }
         }
 
-        use MessageLevel::*;
         match level {
-            Note => self.compiler_diagnostics.span_note_without_error(multispan, &msg.note),
-            Warning => self.compiler_diagnostics.span_warn(multispan, &msg.note),
-            Error => self.compiler_diagnostics.span_err(multispan, &msg.note),
+            MessageLevel::Note => self.compiler_diagnostics.span_note_without_error(multispan, &msg.note),
+            MessageLevel::Warning => self.compiler_diagnostics.span_warn(multispan, &msg.note),
+            MessageLevel::Error => { self.compiler_diagnostics.span_err(multispan, &msg.note); },
         }
     }
 }
@@ -1355,20 +1355,9 @@ impl Verifier {
         crate_name: String,
     ) -> Result<bool, VirErr> {
         let autoviewed_call_typs = Arc::new(std::sync::Mutex::new(HashMap::new()));
-        if !self.args.no_enhanced_typecheck {
-            let _ =
-                tcx.formal_verifier_callback.replace(Some(Box::new(crate::typecheck::Typecheck {
-                    int_ty_id: None,
-                    nat_ty_id: None,
-                    enhanced_typecheck: !self.args.no_enhanced_typecheck,
-                    exprs_in_spec: Arc::new(std::sync::Mutex::new(HashSet::new())),
-                    autoviewed_calls: HashSet::new(),
-                    autoviewed_call_typs: autoviewed_call_typs.clone(),
-                })));
-        }
-        match rustc_typeck::check_crate(tcx) {
+        match rustc_hir_analysis::check_crate(tcx) {
             Ok(()) => {}
-            Err(rustc_errors::ErrorReported {}) => {
+            Err(ErrorGuaranteed) => {
                 return Ok(false);
             }
         }
@@ -1389,8 +1378,8 @@ impl Verifier {
                 .owners
                 .iter()
                 .filter_map(|oi| {
-                    oi.as_ref().and_then(|o| {
-                        if let OwnerNode::Crate(c) = o.node() { Some(c.inner) } else { None }
+                    oi.as_owner().as_ref().and_then(|o| {
+                        if let OwnerNode::Crate(c) = o.node() { Some(c.spans.inner_span) } else { None }
                     })
                 })
                 .next()
@@ -1484,7 +1473,7 @@ impl Verifier {
         check_crate_result?;
         let (erasure_modes, inferred_modes) = vir::modes::check_crate(
             &vir_crate,
-            self.args.erasure == crate::config::Erasure::Macro,
+            true
         )?;
         let vir_crate = vir::traits::demote_foreign_traits(&vir_crate)?;
 
@@ -1533,29 +1522,13 @@ impl std::io::Write for DiagnosticOutputBuffer {
     }
 }
 
-struct Rewrite {}
-
-impl rustc_lint::FormalVerifierRewrite for Rewrite {
-    fn rewrite_crate(
-        &mut self,
-        krate: &rustc_ast::ast::Crate,
-        _next_node_id: &mut dyn FnMut() -> rustc_ast::ast::NodeId,
-    ) -> rustc_ast::ast::Crate {
-        use crate::rustc_ast::mut_visit::MutVisitor;
-        let mut krate = krate.clone();
-        let mut visitor = crate::erase_rewrite::Visitor::new();
-        visitor.visit_crate(&mut krate);
-        krate
-    }
-}
-
 impl Verifier {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
+    fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
         if let Some(target) = &self.test_capture_output {
-            config.diagnostic_output =
-                rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
-                    output: target.clone(),
-                }));
+            // TODO config.diagnostic_output = todo!();
+            // TODO rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
+            // TODO     output: target.clone(),
+            // TODO }));
         }
     }
 }
@@ -1569,22 +1542,22 @@ pub(crate) struct VerifierCallbacksEraseMacro {
         Option<Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>>,
 }
 
-impl rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
+impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
+    fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
         self.verifier.config(config);
     }
 
     fn after_expansion<'tcx>(
         &mut self,
         compiler: &Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
+        queries: &'tcx verus_rustc_interface::Queries<'tcx>,
+    ) -> verus_rustc_driver::Compilation {
         if !compiler.session().compile_status().is_ok() {
-            return rustc_driver::Compilation::Stop;
+            return verus_rustc_driver::Compilation::Stop;
         }
-        let crate_name = queries.crate_name().expect("crate name").peek().clone();
+        let crate_name: String = queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO correct?
 
-        let _result = queries.global_ctxt().expect("global_ctxt").peek_mut().enter(|tcx| {
+        let _result = queries.global_ctxt().expect("global_ctxt").enter(|tcx| {
             let spans = SpanContextX::new(
                 tcx,
                 compiler.session().local_stable_crate_id(),
@@ -1675,83 +1648,6 @@ impl rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
                 }
             }
         });
-        rustc_driver::Compilation::Stop
-    }
-}
-
-pub(crate) struct VerifierCallbacksEraseAst {
-    pub(crate) verifier: Arc<Mutex<Verifier>>,
-    pub(crate) vir_ready: signalling::Signaller<bool>,
-    pub(crate) now_verify: signalling::Signalled<bool>,
-}
-
-impl rustc_driver::Callbacks for VerifierCallbacksEraseAst {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
-        self.verifier.lock().unwrap().config(config);
-    }
-
-    fn after_parsing<'tcx>(
-        &mut self,
-        _compiler: &Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
-        let _ = {
-            // Install the rewrite_crate callback so that Rust will later call us back on the AST
-            let registration = queries.register_plugins().expect("register_plugins");
-            let peeked = registration.peek();
-            let lint_store = &peeked.1;
-            lint_store.formal_verifier_callback.replace(Some(Box::new(Rewrite {})));
-        };
-        rustc_driver::Compilation::Continue
-    }
-
-    fn after_expansion<'tcx>(
-        &mut self,
-        compiler: &Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
-        let crate_name = queries.crate_name().expect("crate name").peek().clone();
-        let _result = queries.global_ctxt().expect("global_ctxt").peek_mut().enter(|tcx| {
-            let spans = SpanContextX::new(
-                tcx,
-                compiler.session().local_stable_crate_id(),
-                compiler.session().source_map(),
-            );
-            {
-                let mut verifier = self.verifier.lock().expect("verifier mutex");
-                let reporter = Reporter::new(&spans, compiler);
-                if let Err(err) =
-                    verifier.construct_vir_crate(tcx, &spans, &reporter, crate_name.clone())
-                {
-                    reporter.report_as(&err, MessageLevel::Error);
-                    verifier.encountered_vir_error = true;
-                    return;
-                }
-            }
-
-            if !compiler.session().compile_status().is_ok() {
-                return;
-            }
-
-            self.vir_ready.signal(false);
-
-            if self.now_verify.wait() {
-                // there was an error in typeck or borrowck
-                return;
-            }
-
-            {
-                let mut verifier = self.verifier.lock().expect("verifier mutex");
-                match verifier.verify_crate(compiler, &spans) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        let reporter = Reporter::new(&spans, compiler);
-                        reporter.report_as(&err, MessageLevel::Error);
-                        verifier.encountered_vir_error = true;
-                    }
-                }
-            }
-        });
-        rustc_driver::Compilation::Stop
+        verus_rustc_driver::Compilation::Stop
     }
 }

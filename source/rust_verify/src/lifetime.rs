@@ -116,30 +116,31 @@ use crate::spans::SpanContext;
 use crate::util::error;
 use crate::verifier::DiagnosticOutputBuffer;
 use air::messages::{message_bare, Message, MessageLevel};
-use rustc_hir::{AssocItemKind, Crate, ItemKind, OwnerNode};
+use rustc_hir::{AssocItemKind, Crate, ItemKind, OwnerNode, MaybeOwner};
 use rustc_middle::ty::TyCtxt;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Write;
 use vir::ast::VirErr;
 
+
 // Call Rust's mir_borrowck to check lifetimes of #[spec] and #[proof] code and variables
-pub(crate) fn check<'tcx>(queries: &'tcx rustc_interface::Queries<'tcx>) {
-    queries.global_ctxt().expect("global_ctxt").peek_mut().enter(|tcx| {
+pub(crate) fn check<'tcx>(queries: &'tcx verus_rustc_interface::Queries<'tcx>) {
+    queries.global_ctxt().expect("global_ctxt").enter(|tcx| {
         let hir = tcx.hir();
         let krate = hir.krate();
         for owner in &krate.owners {
-            if let Some(owner) = owner {
+            if let MaybeOwner::Owner(owner) = owner {
                 match owner.node() {
                     OwnerNode::Item(item) => match &item.kind {
                         rustc_hir::ItemKind::Fn(..) => {
-                            tcx.ensure().mir_borrowck(item.def_id);
+                            tcx.ensure().mir_borrowck(item.owner_id.def_id); // TODO correct?
                         }
                         ItemKind::Impl(impll) => {
                             for item in impll.items {
                                 match item.kind {
                                     AssocItemKind::Fn { .. } => {
-                                        tcx.ensure().mir_borrowck(item.id.def_id);
+                                        tcx.ensure().mir_borrowck(item.id.owner_id.def_id); // TODO correct?
                                     }
                                     _ => {}
                                 }
@@ -219,21 +220,21 @@ struct LifetimeCallbacks {
     capture_output: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
 }
 
-impl rustc_driver::Callbacks for LifetimeCallbacks {
-    fn config(&mut self, config: &mut rustc_interface::interface::Config) {
-        config.diagnostic_output =
-            rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
-                output: self.capture_output.clone(),
-            }));
+impl verus_rustc_driver::Callbacks for LifetimeCallbacks {
+    fn config(&mut self, config: &mut verus_rustc_interface::interface::Config) {
+        // TODO config.diagnostic_output = todo!();
+        // TODO rustc_session::DiagnosticOutput::Raw(Box::new(DiagnosticOutputBuffer {
+        // TODO     output: self.capture_output.clone(),
+        // TODO }));
     }
 
     fn after_parsing<'tcx>(
         &mut self,
-        _compiler: &rustc_interface::interface::Compiler,
-        queries: &'tcx rustc_interface::Queries<'tcx>,
-    ) -> rustc_driver::Compilation {
+        _compiler: &verus_rustc_interface::interface::Compiler,
+        queries: &'tcx verus_rustc_interface::Queries<'tcx>,
+    ) -> verus_rustc_driver::Compilation {
         check(queries);
-        rustc_driver::Compilation::Stop
+        verus_rustc_driver::Compilation::Stop
     }
 }
 
@@ -304,7 +305,7 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
     }
     let capture_output = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let mut callbacks = LifetimeCallbacks { capture_output };
-    let mut compiler = rustc_driver::RunCompiler::new(&rustc_args, &mut callbacks);
+    let mut compiler = verus_rustc_driver::RunCompiler::new(&rustc_args, &mut callbacks);
     compiler.set_file_loader(Some(Box::new(LifetimeFileLoader { rust_code })));
     let run = compiler.run();
     let bytes: &Vec<u8> = &*callbacks.capture_output.lock().expect("lock capture_output");

@@ -11,7 +11,7 @@ use crate::{unsupported, unsupported_err, unsupported_err_unless, unsupported_un
 use rustc_ast::Attribute;
 use rustc_hir::{
     def::Res, Body, BodyId, Crate, FnDecl, FnHeader, FnRetTy, FnSig, Generics, ImplicitSelfKind,
-    Param, PrimTy, QPath, Ty, TyKind, Unsafety,
+    Param, PrimTy, QPath, Ty, TyKind, Unsafety, MaybeOwner, MutTy,
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_span::symbol::{Ident, Symbol};
@@ -39,7 +39,7 @@ pub(crate) fn body_to_vir<'tcx>(
     mode: Mode,
     external_body: bool,
 ) -> Result<vir::ast::Expr, VirErr> {
-    let def = rustc_middle::ty::WithOptConstParam::unknown(id.hir_id.owner);
+    let def = rustc_middle::ty::WithOptConstParam::unknown(id.hir_id.owner.def_id);
     let types = ctxt.tcx.typeck_opt_const_arg(def);
     let bctx =
         BodyCtxt { ctxt: ctxt.clone(), types, mode, external_body, in_ghost: mode != Mode::Exec };
@@ -53,7 +53,7 @@ fn check_fn_decl<'tcx>(
     mode: Mode,
     output_ty: rustc_middle::ty::Ty<'tcx>,
 ) -> Result<Option<(Typ, Mode)>, VirErr> {
-    let FnDecl { inputs: _, output, c_variadic, implicit_self } = decl;
+    let FnDecl { inputs: _, output, c_variadic, implicit_self, lifetime_elision_allowed: _ } = decl;
     unsupported_unless!(!c_variadic, "c_variadic");
     match implicit_self {
         rustc_hir::ImplicitSelfKind::None => {}
@@ -68,7 +68,7 @@ fn check_fn_decl<'tcx>(
         // so we always return the default mode.
         // The current workaround is to return a struct if the default doesn't work.
         rustc_hir::FnRetTy::Return(_ty) => {
-            let typ = mid_ty_to_vir(tcx, output_ty, false);
+            let typ = mid_ty_to_vir(tcx, &output_ty, false);
             Ok(Some((typ, get_ret_mode(mode, attrs))))
         }
     }
@@ -88,8 +88,8 @@ pub(crate) fn find_body_krate<'tcx>(
     krate: &'tcx Crate<'tcx>,
     body_id: &BodyId,
 ) -> &'tcx Body<'tcx> {
-    let owner = krate.owners[body_id.hir_id.owner].as_ref();
-    if let Some(owner) = owner {
+    let owner = krate.owners[body_id.hir_id.owner.def_id];
+    if let MaybeOwner::Owner(owner) = owner {
         if let Some(body) = owner.nodes.bodies.get(&body_id.hir_id.local_id) {
             return body;
         }
@@ -114,7 +114,7 @@ fn check_new_strlit<'tcx>(ctx: &Context<'tcx>, sig: &'tcx FnSig<'tcx>) -> Result
     }
 
     let (kind, span) = match &decl.inputs[0].kind {
-        TyKind::Rptr(_, mutty) => (&mutty.ty.kind, mutty.ty.span),
+        TyKind::Ptr(MutTy { ty, mutbl }) => (&ty.kind, ty.span),
         _ => return err_span_string(decl.inputs[0].span, format!("expected a str")),
     };
 
@@ -426,7 +426,7 @@ pub(crate) fn check_item_fn<'tcx>(
     Ok(Some(name))
 }
 
-fn is_mut_ty<'tcx>(ty: rustc_middle::ty::Ty<'tcx>) -> Option<rustc_middle::ty::Ty<'tcx>> {
+fn is_mut_ty<'tcx>(ty: &'tcx rustc_middle::ty::Ty<'tcx>) -> Option<&'tcx rustc_middle::ty::Ty<'tcx>> {
     match ty.kind() {
         rustc_middle::ty::TyKind::Ref(_, tys, rustc_ast::Mutability::Mut) => Some(tys),
         _ => None,
@@ -513,7 +513,7 @@ pub(crate) fn check_foreign_item_fn<'tcx>(
     assert!(idents.len() == inputs.len());
     for (param, input) in idents.iter().zip(inputs.iter()) {
         let name = Arc::new(foreign_param_to_var(param));
-        let is_mut = is_mut_ty(input);
+        let is_mut = is_mut_ty(&input);
         let typ = mid_ty_to_vir(ctxt.tcx, is_mut.unwrap_or(input), false);
         // REVIEW: the parameters don't have attributes, so we use the overall mode
         let vir_param =
