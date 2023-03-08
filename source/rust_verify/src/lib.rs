@@ -10,7 +10,6 @@ extern crate rustc_hir;
 extern crate rustc_hir_analysis;
 extern crate rustc_hir_pretty;
 extern crate rustc_infer;
-extern crate verus_rustc_interface;
 extern crate rustc_lint;
 extern crate rustc_macros;
 extern crate rustc_middle;
