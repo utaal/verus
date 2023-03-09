@@ -24,14 +24,14 @@ macro_rules! declare_atomic_type {
             where Pred: AtomicInvariantPredicate<K, $value_ty, G>
         {
             #[cfg(verus_macro_erase_ghost)]
-            #[verifier(publish)]
-            #[spec]
+            #[verifier::publish]
+            #[verifier::spec]
             fn inv(k_loc: (K, int), perm_g: ($perm_ty, G)) -> bool {
                 panic!()
             }
 
             #[cfg(not(verus_macro_erase_ghost))]
-            #[verifier(publish)] /* vattr */
+            #[verifier::publish] /* vattr */
             #[verifier::spec]
             fn inv(k_loc: (K, int), perm_g: ($perm_ty, G)) -> bool {
                 let (k, loc) = k_loc;
@@ -64,13 +64,13 @@ macro_rules! declare_atomic_type {
             where Pred: AtomicInvariantPredicate<K, $value_ty, G>
         {
             #[cfg(not(verus_macro_erase_ghost))]
-            #[verifier::spec] #[verifier(publish)] /* vattr */
+            #[verifier::spec] #[verifier::publish] /* vattr */
             pub fn well_formed(&self) -> bool {
                 self.atomic_inv.constant().1 == self.patomic.id()
             }
 
             #[cfg(not(verus_macro_erase_ghost))]
-            #[verifier::spec] #[verifier(publish)] /* vattr */
+            #[verifier::spec] #[verifier::publish] /* vattr */
             pub fn constant(&self) -> K {
                 self.atomic_inv.constant().0
             }

@@ -90,13 +90,13 @@ macro_rules! make_bool_atomic {
 
 macro_rules! atomic_types {
     ($at_ident:ident, $p_ident:ident, $p_data_ident:ident, $rust_ty: ty, $value_ty: ty) => {
-        #[verifier(external_body)] /* vattr */
+        #[verifier::external_body] /* vattr */
         pub struct $at_ident {
             ato: $rust_ty,
         }
 
         #[verifier::proof]
-        #[verifier(external_body)] /* vattr */
+        #[verifier::external_body] /* vattr */
         pub struct $p_ident {
             no_copy: NoCopy,
         }
@@ -109,17 +109,17 @@ macro_rules! atomic_types {
 
         impl $p_ident {
             #[verifier::spec]
-            #[verifier(external_body)] /* vattr */
+            #[verifier::external_body] /* vattr */
             pub fn view(self) -> $p_data_ident { unimplemented!(); }
 
             #[cfg(not(verus_macro_erase_ghost))]
-            #[verifier::spec] #[verifier(publish)] /* vattr */
+            #[verifier::spec] #[verifier::publish] /* vattr */
             pub fn is_for(&self, patomic: $at_ident) -> bool {
                 self.view().patomic == patomic.id()
             }
 
             #[cfg(not(verus_macro_erase_ghost))]
-            #[verifier::spec] #[verifier(publish)] /* vattr */
+            #[verifier::spec] #[verifier::publish] /* vattr */
             pub fn points_to(&self, v: $value_ty) -> bool {
                 self.view().value == v
             }
@@ -132,7 +132,7 @@ macro_rules! atomic_common_methods {
         fndecl!(pub fn id(&self) -> int);
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
+        #[verifier::external_body] /* vattr */
         pub fn new(i: $value_ty) -> ($at_ident, Proof<$p_ident>) {
             #[cfg(not(verus_macro_erase_ghost))]
             ensures(|res : ($at_ident, Proof<$p_ident>)|
@@ -145,8 +145,8 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn load(&self, #[verifier::proof] perm: &$p_ident) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -161,8 +161,8 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn store(&self, #[verifier::proof] perm: &mut $p_ident, v: $value_ty) {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -177,8 +177,8 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn compare_exchange(&self, #[verifier::proof] perm: &mut $p_ident, current: $value_ty, new: $value_ty) -> Result<$value_ty, $value_ty> {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -208,8 +208,8 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn compare_exchange_weak(&self, #[verifier::proof] perm: &mut $p_ident, current: $value_ty, new: $value_ty) -> Result<$value_ty, $value_ty> {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -238,8 +238,8 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn swap(&self, #[verifier::proof] perm: &mut $p_ident, v: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -258,7 +258,7 @@ macro_rules! atomic_common_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
+        #[verifier::external_body] /* vattr */
         pub fn into_inner(self, #[verifier::proof] perm: $p_ident) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -280,8 +280,8 @@ macro_rules! atomic_integer_methods {
         // for Rust's atomics (in contrast to ordinary arithmetic)
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_add_wrapping(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires(equal(self.id(), old(perm).view().patomic));
@@ -298,8 +298,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_sub_wrapping(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires(equal(self.id(), old(perm).view().patomic));
@@ -319,7 +319,7 @@ macro_rules! atomic_integer_methods {
         // don't expect wrapping
 
         #[inline(always)]
-        #[verifier(atomic)] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_add(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -341,7 +341,7 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(atomic)] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_sub(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -363,8 +363,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_and(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -382,8 +382,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_or(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -401,8 +401,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_xor(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -420,8 +420,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_nand(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -439,8 +439,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_max(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -458,8 +458,8 @@ macro_rules! atomic_integer_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_min(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty
         {
             #[cfg(not(verus_macro_erase_ghost))]
@@ -481,8 +481,8 @@ macro_rules! atomic_integer_methods {
 macro_rules! atomic_bool_methods {
     ($at_ident:ident, $p_ident:ident, $rust_ty: ty, $value_ty: ty) => {
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_and(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -500,8 +500,8 @@ macro_rules! atomic_bool_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_or(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -519,8 +519,8 @@ macro_rules! atomic_bool_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_xor(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
@@ -538,8 +538,8 @@ macro_rules! atomic_bool_methods {
         }
 
         #[inline(always)]
-        #[verifier(external_body)] /* vattr */
-        #[verifier(atomic)] /* vattr */
+        #[verifier::external_body] /* vattr */
+        #[verifier::atomic] /* vattr */
         pub fn fetch_nand(&self, #[verifier::proof] perm: &mut $p_ident, n: $value_ty) -> $value_ty {
             #[cfg(not(verus_macro_erase_ghost))]
             requires([
