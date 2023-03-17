@@ -1,13 +1,11 @@
-use rust_verify::config::Args;
-use rust_verify::file_loader::PervasiveFileLoader;
-use rust_verify::verifier::Verifier;
+#![feature(rustc_private)]
+
+extern crate rustc_driver;
 
 // For diagnostics when something goes wrong, try "cargo build -vv"
 
-// path to install relative to our directory (source/vstd)
-const INSTALL_REL_PATH: &str = "../../rust/install";
-// path to install/bin relative to our directory (source/vstd)
-const INSTALL_BIN_REL_PATH: &str = "../../rust/install/bin/";
+// the build script’s current directory is the source directory of the build script’s package
+
 // path to vstd.rs relative to our directory (source/vstd)
 const VSTD_RS_PATH: &str = "../pervasive/vstd.rs";
 // path to pervasive relative to our directory (source/vstd)
@@ -16,6 +14,10 @@ const PERVASIVE_PATH: &str = "../pervasive";
 const VSTD_VIR: &str = "vstd.vir";
 
 fn main() {
+    // Consider using links for the rlib paths instead
+    // https://rust-lang.zulipchat.com/#narrow/stream/122651-general/topic/cargo.20build.2Ers.20artifact/near/340569806
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+
     #[cfg(target_os = "macos")]
     let (pre, dl) = ("lib", "dylib");
 
@@ -25,36 +27,50 @@ fn main() {
     #[cfg(target_os = "windows")]
     let (pre, dl) = ("", "dll");
 
-    let rustc_args: Vec<String> = vec![
-        format!("{INSTALL_BIN_REL_PATH}rust_verify"),
+    let target_path = std::path::Path::new(&out_dir).parent().unwrap().parent().unwrap().parent().unwrap();
+    let deps_path = target_path.join("deps");
+
+    let find_dep = |pattern| std::fs::read_dir(&deps_path).unwrap().find(|x| x.as_ref().unwrap().file_name().to_str().unwrap().contains(&(pre.to_string() + pattern + "-"))).expect(&format!("dependency {pattern} not found")).unwrap().path();
+
+    let lib_builtin_path = find_dep("builtin");
+    let lib_builtin_path = lib_builtin_path.to_str().unwrap();
+    let lib_builtin_macros_path = find_dep("builtin_macros");
+    let lib_builtin_macros_path = lib_builtin_macros_path.to_str().unwrap();
+    let lib_state_machines_macros_path = find_dep("state_machines_macros");
+    let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
+
+    let target_path = target_path
+        .to_str().unwrap().to_string() + "/";
+
+    let child_args: Vec<String> = vec![
+        "--internal-build-vstd-driver".to_string(),
+        PERVASIVE_PATH.to_string(),
+        VSTD_VIR.to_string(),
+        target_path.to_string(),
+        "../z3".to_string(),
         "--extern".to_string(),
-        format!("builtin={INSTALL_BIN_REL_PATH}libbuiltin.rlib"),
+        format!("builtin={lib_builtin_path}"),
         "--extern".to_string(),
-        format!("builtin_macros={INSTALL_BIN_REL_PATH}{pre}builtin_macros.{dl}"),
+        format!("builtin_macros={lib_builtin_macros_path}"),
         "--extern".to_string(),
-        format!("state_machines_macros={INSTALL_BIN_REL_PATH}{pre}state_machines_macros.{dl}"),
+        format!("state_machines_macros={lib_state_machines_macros_path}"),
         "--edition=2018".to_string(),
-        "--sysroot".to_string(),
-        INSTALL_REL_PATH.to_string(),
         "--cfg".to_string(),
         "erasure_macro_todo".to_string(),
         "--crate-type=lib".to_string(),
         "--out-dir".to_string(),
-        INSTALL_BIN_REL_PATH.to_string(),
+        target_path.to_string(),
         VSTD_RS_PATH.to_string(),
     ];
 
-    let mut our_args: Args = Default::default();
-    our_args.pervasive_path = Some(PERVASIVE_PATH.to_string());
-    our_args.verify_pervasive = true;
-    our_args.multiple_errors = 2;
-    our_args.erasure = rust_verify::config::Erasure::Macro;
-    our_args.export = Some(INSTALL_BIN_REL_PATH.to_string() + VSTD_VIR);
-    our_args.compile = true;
-    let file_loader = PervasiveFileLoader::new(Some(PERVASIVE_PATH.to_string()));
-    let verifier = Verifier::new(our_args);
-    let (_verifier, _stats, status) = rust_verify::driver::run(verifier, rustc_args, file_loader);
-    status.expect("failed to build vstd library");
+    let cmd = std::env::var("CARGO_BIN_FILE_RUST_VERIFY_rust_verify").unwrap();
+    let mut child = std::process::Command::new(cmd)
+        .args(&child_args[..])
+        .spawn()
+        .expect("could not execute lifetime rustc process");
+    if !child.wait().expect("vstd verus wait failed").success() {
+        panic!("vstd build failed");
+    }
 
     println!("cargo:rerun-if-changed={PERVASIVE_PATH}");
 }

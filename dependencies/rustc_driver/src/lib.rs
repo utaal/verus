@@ -255,7 +255,7 @@ fn run_compiler(
     };
 
     if !tracing::dispatcher::has_been_set() {
-        init_rustc_env_logger_with_backtrace_option(&config.opts.unstable_opts.log_backtrace);
+        // TODO init_rustc_env_logger_with_backtrace_option(&config.opts.unstable_opts.log_backtrace);
     }
 
     match make_input(config.opts.error_format, &matches.free) {

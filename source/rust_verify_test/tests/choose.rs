@@ -128,7 +128,7 @@ test_verify_one_file! {
             assert(f(7, 8));
             assert(i <= j);
         }
-    } => Err(TestErr { has_vir_error: false, .. })
+    } => Err(e) => assert_rust_error_code(e, "E0277")
 }
 
 // choose_tuple
