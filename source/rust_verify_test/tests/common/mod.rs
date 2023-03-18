@@ -108,30 +108,47 @@ pub fn verify_files_vstd(
     import_vstd: bool,
     options: &[&str],
 ) -> Result<(), TestErr> {
+    if std::env::var("VERUS_IN_VARGO").is_err() {
+        panic!("not running in vargo, read the README for instructions");
+    }
+
     THREAD_LOCAL_TEST_NAME.with(|tn| *tn.borrow_mut() = Some(name.to_string()));
 
     let files: Vec<(String, String)> = files.into_iter().collect();
 
     #[cfg(target_os = "macos")]
-    let library_prefix = "lib";
+    let (pre, dl) = ("lib", "dylib");
 
     #[cfg(target_os = "linux")]
-    let library_prefix = "lib";
+    let (pre, dl) = ("lib", "so");
 
     #[cfg(target_os = "windows")]
-    let library_prefix = "";
+    let (pre, dl) = ("", "dll");
 
     let vars = std::env::vars().collect::<Vec<_>>();
     let current_exe = std::env::current_exe().unwrap();
     let deps_path = current_exe.parent().unwrap();
     let target_path = deps_path.parent().unwrap();
-    let find_dep = |pattern| std::fs::read_dir(&deps_path).unwrap().find(|x| x.as_ref().unwrap().file_name().to_str().unwrap().contains(&(library_prefix.to_string() + pattern + "-"))).expect(&format!("dependency {pattern} not found")).unwrap().path();
+    let profile = target_path.file_name().unwrap().to_str().unwrap();
+    let verus_target_path = target_path.parent().unwrap().parent().unwrap().to_path_buf().join("target-verus").join(profile);
 
-    let lib_builtin_path = find_dep("builtin");
+    fn wait_exists(path: &std::path::Path) {
+        while !path.exists() {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    }
+
+    let lib_builtin_path = verus_target_path.join(format!("{}builtin.rlib", pre));
+    wait_exists(&lib_builtin_path);
+    assert!(lib_builtin_path.exists());
     let lib_builtin_path = lib_builtin_path.to_str().unwrap();
-    let lib_builtin_macros_path = find_dep("builtin_macros");
+    let lib_builtin_macros_path = verus_target_path.join(format!("{}builtin_macros.{}", pre, dl));
+    wait_exists(&lib_builtin_macros_path);
+    assert!(lib_builtin_macros_path.exists());
     let lib_builtin_macros_path = lib_builtin_macros_path.to_str().unwrap();
-    let lib_state_machines_macros_path = find_dep("state_machines_macros");
+    let lib_state_machines_macros_path = verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
+    wait_exists(&lib_state_machines_macros_path);
+    assert!(lib_state_machines_macros_path.exists());
     let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
 
     // TODO let pervasive_path = match std::env::var("TEST_PERVASIVE_PATH") {
@@ -143,17 +160,8 @@ pub fn verify_files_vstd(
     let deps_dir = deps_dir.parent().unwrap();
     let target_dir = deps_dir.parent().unwrap();
 
-    let bin = {
-        let bin_dir = std::fs::read_dir(deps_dir
-                .join("artifact")).unwrap().find(|x| x.as_ref().unwrap().file_name().to_str().unwrap().contains("rust_verify"))
-                .expect("rust_verify artifact not found")
-                .unwrap()
-                .path()
-                .join("bin");
-        let re = regex::Regex::new(r"^rust_verify-[a-zA-Z0-9]+$").unwrap();
-        let bin = std::fs::read_dir(bin_dir).unwrap().find(|x| re.is_match(x.as_ref().unwrap().file_name().to_str().unwrap()));
-        bin.unwrap().unwrap().path().to_str().unwrap().to_string()
-    };
+    let bin = verus_target_path.join("rust_verify");
+    wait_exists(&bin);
 
     let (test_binary, test_name) = {
         let mut args = std::env::args();
@@ -214,7 +222,7 @@ pub fn verify_files_vstd(
     if import_vstd {
         let lib_vstd_vir_path = target_dir.join("vstd.vir");
         let lib_vstd_vir_path = lib_vstd_vir_path.to_str().unwrap();
-        let lib_vstd_path = target_dir.join(library_prefix.to_string() + "vstd.rlib");
+        let lib_vstd_path = target_dir.join(pre.to_string() + "vstd.rlib");
         let lib_vstd_path = lib_vstd_path.to_str().unwrap();
         verus_args.append(&mut vec!["--cfg".to_string(), "vstd_todo".to_string()]);
         verus_args.append(&mut vec![

@@ -19,3 +19,6 @@ llvm = []
 # TODO llvm = ['rustc_codegen_llvm']
 rustc_use_parallel_compiler = ['rayon', 'rustc-rayon-core']
 # rustc_use_parallel_compiler = ['rayon', 'rustc-rayon-core', 'rustc_query_impl/rustc_use_parallel_compiler', 'rustc_errors/rustc_use_parallel_compiler']
+
+[package.metadata.rust-analyzer]
+rustc_private = true

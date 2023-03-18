@@ -28,3 +28,6 @@ regex = "1"
 
 [features]
 singular = ["vir/singular", "air/singular"]
+
+[package.metadata.rust-analyzer]
+rustc_private = true

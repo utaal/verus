@@ -10,10 +10,20 @@ extern crate rustc_driver;
 const VSTD_RS_PATH: &str = "../pervasive/vstd.rs";
 // path to pervasive relative to our directory (source/vstd)
 const PERVASIVE_PATH: &str = "../pervasive";
-// name of generated veruslib.vir in install/bin
+// name of generated veruslib.vir in target
 const VSTD_VIR: &str = "vstd.vir";
 
+fn wait_exists(path: &std::path::Path) {
+    while !path.exists() {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+}
+
 fn main() {
+    if std::env::var("VERUS_IN_VARGO").is_err() {
+        panic!("not running in vargo, read the README for instructions");
+    }
+
     // Consider using links for the rlib paths instead
     // https://rust-lang.zulipchat.com/#narrow/stream/122651-general/topic/cargo.20build.2Ers.20artifact/near/340569806
     let out_dir = std::env::var("OUT_DIR").unwrap();
@@ -27,26 +37,34 @@ fn main() {
     #[cfg(target_os = "windows")]
     let (pre, dl) = ("", "dll");
 
+    let profile = std::env::var("PROFILE").unwrap();
+
     let target_path = std::path::Path::new(&out_dir).parent().unwrap().parent().unwrap().parent().unwrap();
-    let deps_path = target_path.join("deps");
+    let verus_target_path = target_path.parent().unwrap().parent().unwrap().to_path_buf().join("target-verus").join(profile);
 
-    let find_dep = |pattern| std::fs::read_dir(&deps_path).unwrap().find(|x| x.as_ref().unwrap().file_name().to_str().unwrap().contains(&(pre.to_string() + pattern + "-"))).expect(&format!("dependency {pattern} not found")).unwrap().path();
-
-    let lib_builtin_path = find_dep("builtin");
+    let lib_builtin_path = verus_target_path.join(format!("{}builtin.rlib", pre));
+    wait_exists(&lib_builtin_path);
+    assert!(lib_builtin_path.exists());
     let lib_builtin_path = lib_builtin_path.to_str().unwrap();
-    let lib_builtin_macros_path = find_dep("builtin_macros");
+    let lib_builtin_macros_path = verus_target_path.join(format!("{}builtin_macros.{}", pre, dl));
+    wait_exists(&lib_builtin_macros_path);
+    assert!(lib_builtin_macros_path.exists());
     let lib_builtin_macros_path = lib_builtin_macros_path.to_str().unwrap();
-    let lib_state_machines_macros_path = find_dep("state_machines_macros");
+    let lib_state_machines_macros_path = verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
+    wait_exists(&lib_state_machines_macros_path);
+    assert!(lib_state_machines_macros_path.exists());
     let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
 
-    let target_path = target_path
+    let vstd_vir_verus_target_path = verus_target_path.join(VSTD_VIR);
+
+    let target_path_str = target_path
         .to_str().unwrap().to_string() + "/";
 
     let child_args: Vec<String> = vec![
         "--internal-build-vstd-driver".to_string(),
         PERVASIVE_PATH.to_string(),
         VSTD_VIR.to_string(),
-        target_path.to_string(),
+        target_path_str.to_string(),
         "../z3".to_string(),
         "--extern".to_string(),
         format!("builtin={lib_builtin_path}"),
@@ -59,7 +77,7 @@ fn main() {
         "erasure_macro_todo".to_string(),
         "--crate-type=lib".to_string(),
         "--out-dir".to_string(),
-        target_path.to_string(),
+        target_path_str.to_string(),
         VSTD_RS_PATH.to_string(),
     ];
 
@@ -71,6 +89,8 @@ fn main() {
     if !child.wait().expect("vstd verus wait failed").success() {
         panic!("vstd build failed");
     }
+
+    std::fs::copy(target_path.join(VSTD_VIR), vstd_vir_verus_target_path).expect("could not copy vstd.vir");
 
     println!("cargo:rerun-if-changed={PERVASIVE_PATH}");
 }

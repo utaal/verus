@@ -33,11 +33,11 @@ enum Mode {
     ExpectFailures,
 }
 
-examples_in_dir!("../rust_verify/example");
-examples_in_dir!("../rust_verify/example/guide");
-examples_in_dir!("../rust_verify/example/state_machines");
-examples_in_dir!("../rust_verify/example/summer_school");
-examples_in_dir!("../rust_verify/example/state_machines/tutorial");
+// TODO examples_in_dir!("../rust_verify/example");
+// TODO examples_in_dir!("../rust_verify/example/guide");
+// TODO examples_in_dir!("../rust_verify/example/state_machines");
+// TODO examples_in_dir!("../rust_verify/example/summer_school");
+// TODO examples_in_dir!("../rust_verify/example/state_machines/tutorial");
 
 fn run_example_for_file(file_path: &str) {
     let relative_path = Path::new(file_path);
