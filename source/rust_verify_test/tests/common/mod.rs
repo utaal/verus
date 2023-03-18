@@ -237,7 +237,7 @@ pub fn verify_files_vstd(
     let rust_output = std::str::from_utf8(&run.stderr[..]).unwrap().trim();
 
     let mut errors = Vec::new();
-    let aborting_due_to_re = regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?$").unwrap();
+    let aborting_due_to_re = regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?").unwrap();
 
     let mut is_failure = run.status.code().unwrap() != 0;
 

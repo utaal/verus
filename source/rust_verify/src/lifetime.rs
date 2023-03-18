@@ -296,7 +296,6 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
     }
     let mut rustc_args = vec![
         LIFETIME_DRIVER_ARG,
-        // "dummyexe".to_string(),
         LifetimeFileLoader::FILENAME,
         "--error-format=json",
     ];
@@ -309,6 +308,7 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
         .spawn()
         .expect("could not execute lifetime rustc process");
     let mut child_stdin = child.stdin.take().expect("take stdin");
+    // std::fs::write("/tmp/verus_lifetime_generate.rs", rust_code.clone()).unwrap(); 
     child_stdin.write(rust_code.as_bytes());
     std::mem::drop(child_stdin);
     let run = child.wait_with_output().expect("lifetime rustc wait failed");
