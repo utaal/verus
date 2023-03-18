@@ -67,7 +67,7 @@ pub struct DiagnosticSpan {
 #[derive(Debug, Deserialize)]
 pub struct DiagnosticCode {
     pub code: String,
-    pub explanation: String,
+    pub explanation: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,6 +76,7 @@ pub struct Diagnostic {
     pub message: String,
     pub level: String,
     pub spans: Vec<DiagnosticSpan>,
+    pub rendered: String,
 }
 
 #[derive(Debug)]
@@ -237,26 +238,34 @@ pub fn verify_files_vstd(
 
     let mut errors = Vec::new();
     let aborting_due_to_re = regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?$").unwrap();
-    eprintln!("rust_output: {}", &rust_output);
+
+    let mut is_failure = run.status.code().unwrap() != 0;
+
+    // eprintln!("rust_output: {}", &rust_output);
     if rust_output.len() > 0 {
         for ss in rust_output.split("\n") {
-            let diag: Diagnostic = serde_json::from_str(ss).expect("serde_json from_str");
-            if diag.level == "failure-note" || diag.level == "note" || diag.level == "warning" {
-                continue;
+            let diag: Result<Diagnostic, _> = serde_json::from_str(ss);
+            if let Ok(diag) = diag {
+                eprintln!("{}", diag.rendered);
+                if diag.level == "failure-note" || diag.level == "note" || diag.level == "warning" {
+                    continue;
+                }
+                assert!(diag.level == "error");
+                if aborting_due_to_re.is_match(&diag.message) {
+                    continue;
+                }
+                errors.push(diag);
+            } else {
+                is_failure = true;
+                eprintln!("[unexpected json] {}", ss);
             }
-            assert!(diag.level == "error");
-            if aborting_due_to_re.is_match(&diag.message) {
-                continue;
-            }
-            errors.push(diag);
         }
     }
 
-    let is_failure = run.status.code().unwrap() != 0;
+    if !is_failure {
+        std::fs::remove_dir_all(&test_input_dir);
+    }
 
-    std::fs::remove_dir_all(&test_input_dir);
-
-    dbg!(&errors);
     if is_failure {
         Err(TestErr {
             errors,
@@ -303,7 +312,7 @@ macro_rules! test_verify_one_file_with_options {
             if let $result = result {
                 $assertions
             } else {
-                assert!(false, "{:?} does not match $result", result);
+                assert!(false, "Err(_) does not match $result");
             }
         }
     };
@@ -314,7 +323,7 @@ macro_rules! test_verify_one_file_with_options {
             #[allow(irrefutable_let_patterns)]
             if let $result = result {
             } else {
-                assert!(false, "{:?} does not match $result", result);
+                assert!(false, "Err(_) does not match $result");
             }
         }
     };

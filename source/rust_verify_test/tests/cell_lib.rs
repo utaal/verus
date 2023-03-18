@@ -289,7 +289,7 @@ test_verify_one_file! {
         pub fn foo(r: cell::PointsTo<Foo>) {
             f(r);
         }
-    } => Err(e) => assert_error_msg(e, "the trait `std::marker::Sync` is not implemented for `Foo`")
+    } => Err(e) => assert_rust_error_code(e, "E0277")
 }
 
 test_verify_one_file! {
@@ -306,5 +306,5 @@ test_verify_one_file! {
         pub fn foo(r: cell::PointsTo<Foo>) {
             f(r);
         }
-    } => Err(e) => assert_error_msg(e, "the trait `std::marker::Send` is not implemented for `Foo`")
+    } => Err(e) => assert_rust_error_code(e, "E0277")
 }

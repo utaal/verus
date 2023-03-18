@@ -3,7 +3,7 @@
 mod common;
 use common::*;
 
-const COMMON: &str = code_str! {
+const COMMON: &str = verus_code_str! {
     use vstd::invariant::*;
 
     verus!{
@@ -27,7 +27,7 @@ const COMMON: &str = code_str! {
     }
 };
 
-const COMMON_TODO_DELETE_THIS: &str = code_str! {
+const COMMON_TODO_DELETE_THIS: &str = verus_code_str! {
     use vstd::invariant::*;
 
     verus!{
@@ -76,7 +76,7 @@ test_verify_one_file! {
 
 test_verify_one_file! {
     #[test] non_atomic_fail
-    COMMON_TODO_DELETE_THIS.to_string() + verus_code_str! {
+    COMMON_TODO_DELETE_THIS.to_string() + verus_verus_code_str! {
         pub fn do_nothing<A, B: InvariantPredicate<A, u8>>(i: Tracked<AtomicInvariant<A, u8, B>>) {
             open_atomic_invariant!(i.borrow() => inner => {
                 non_atomic_op();
@@ -103,7 +103,9 @@ test_verify_one_file! {
     COMMON_TODO_DELETE_THIS.to_string() + verus_code_str! {
         pub fn do_nothing<A, B: InvariantPredicate<A, u8>>(i: Tracked<AtomicInvariant<A, u8, B>>, j: u64) {
             open_atomic_invariant!(i.borrow() => inner => {
-                proof { proof_op(); }
+                proof {
+                    proof { proof_op(); }
+                }
                 atomic_op();
             });
         }

@@ -611,6 +611,7 @@ pub(crate) fn check_generic_bound<'tcx>(
         || Some(trait_def_id) == tcx.lang_items().copy_trait()
         || Some(trait_def_id) == tcx.lang_items().unpin_trait()
         || Some(trait_def_id) == tcx.lang_items().sync_trait()
+        || Some(trait_def_id) == tcx.lang_items().tuple_trait()
         || Some(trait_def_id) == tcx.get_diagnostic_item(rustc_span::sym::Send)
     {
         // Rust language marker traits are ignored in VIR
