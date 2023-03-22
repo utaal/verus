@@ -273,7 +273,7 @@ test_verify_one_file! {
             }
             a
         }
-    } => Err(err) => assert_error_msg(err, "cannot assign to exec variable from proof mode")
+    } => Err(err) => assert_vir_error_msg(err, "cannot assign to exec variable from proof mode")
 }
 
 test_verify_one_file! {
