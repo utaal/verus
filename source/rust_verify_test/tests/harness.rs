@@ -26,7 +26,8 @@ fn harness_invalid_rust() {
         }
     };
     let err = verify_one_file("harness_invalid_rust", code, &[]).unwrap_err();
-    assert_eq!(err.errors.len(), 0);
+    assert_eq!(err.errors.len(), 1);
+    assert_rust_error_code(err, "E0425");
 }
 
 #[test]
