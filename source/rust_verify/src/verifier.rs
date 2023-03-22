@@ -104,7 +104,6 @@ pub struct Verifier {
     // proof debugging purposes
     expand_flag: bool,
     pub expand_targets: Vec<air::messages::Message>,
-    pub expand_errors: Vec<Vec<ErrorSpan>>,
 }
 
 #[derive(Debug)]
@@ -190,7 +189,6 @@ impl Verifier {
 
             expand_flag: false,
             expand_targets: vec![],
-            expand_errors: vec![],
         }
     }
 
@@ -442,45 +440,6 @@ impl Verifier {
                                 compiler.session().source_map(),
                             );
                             debugger.start_shell(air_context);
-                        }
-                    }
-
-                    if self.expand_flag {
-                        // For testing setup, add error for each relevant span
-                        if vir::split_expression::is_split_error(&error) {
-                            let mut errors: Vec<ErrorSpan> = vec![];
-                            for span in &error.spans {
-                                let error = ErrorSpan::new_from_air_span(
-                                    spans,
-                                    compiler.session().source_map(),
-                                    &error.note,
-                                    span,
-                                );
-                                todo!();
-                                // TODO if !errors
-                                // TODO     .iter()
-                                // TODO     .any(|x: &ErrorSpan| x.test_span_line == error.test_span_line)
-                                // TODO {
-                                // TODO     errors.push(error);
-                                // TODO }
-                            }
-
-                            for label in &error.labels {
-                                let error = ErrorSpan::new_from_air_span(
-                                    spans,
-                                    compiler.session().source_map(),
-                                    &error.note,
-                                    &label.span,
-                                );
-                                todo!();
-                                // TODO if !errors
-                                // TODO     .iter()
-                                // TODO     .any(|x: &ErrorSpan| x.test_span_line == error.test_span_line)
-                                // TODO {
-                                // TODO     errors.push(error);
-                                // TODO }
-                            }
-                            self.expand_errors.push(errors);
                         }
                     }
 

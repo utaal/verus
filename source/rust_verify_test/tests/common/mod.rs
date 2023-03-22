@@ -82,7 +82,7 @@ pub struct Diagnostic {
 #[derive(Debug)]
 pub struct TestErr {
     pub errors: Vec<Diagnostic>,
-    // TODO pub expand_errors: Vec<Vec<()>>, // when Verus is with `expand-errors` flag
+    pub expand_errors_notes: Vec<Diagnostic>, // produced by the `--expand-errors` flag
 }
 
 #[allow(dead_code)]
@@ -181,30 +181,12 @@ pub fn verify_files_vstd(
         f.write_all(file_contents.as_bytes()).expect("failed to write test file contents");
     }
 
-    let mut verus_args = vec![
-        "--edition".to_string(),
-        "2018".to_string(),
-        "--crate-name".to_string(),
-        "test_crate".to_string(),
-        "--crate-type".to_string(),
-        "lib".to_string(),
-        "--extern".to_string(),
-        format!("builtin={lib_builtin_path}"),
-        "--extern".to_string(),
-        format!("builtin_macros={lib_builtin_macros_path}"),
-        "--extern".to_string(),
-        format!("state_machines_macros={lib_state_machines_macros_path}"),
-        "--error-format=json".to_string(),
-    ];
-
-    verus_args.push(test_input_dir.join(entry_file).to_str().unwrap().to_string());
-    verus_args.append(&mut vec!["--cfg".to_string(), "erasure_macro_todo".to_string()]);
-
+    let mut verus_args = Vec::new();
+    
     for option in options.iter() {
         if *option == "--expand-errors" {
-            verus_args.push("--expand_errors".to_string());
-            verus_args.push("true".to_string());
-            verus_args.push("--multiple_errors".to_string());
+            verus_args.push("--expand-errors".to_string());
+            verus_args.push("--multiple-errors".to_string());
             verus_args.push("2".to_string());
         } else if *option == "--arch-word-bits 32" {
             verus_args.push("--arch-word-bits".to_string());
@@ -218,6 +200,25 @@ pub fn verify_files_vstd(
             panic!("option '{}' not recognized by test harness", option);
         }
     }
+    
+    verus_args.extend(vec![
+        "--edition".to_string(),
+        "2018".to_string(),
+        "--crate-name".to_string(),
+        "test_crate".to_string(),
+        "--crate-type".to_string(),
+        "lib".to_string(),
+        "--extern".to_string(),
+        format!("builtin={lib_builtin_path}"),
+        "--extern".to_string(),
+        format!("builtin_macros={lib_builtin_macros_path}"),
+        "--extern".to_string(),
+        format!("state_machines_macros={lib_state_machines_macros_path}"),
+        "--error-format=json".to_string(),
+    ].into_iter());
+
+    verus_args.push(test_input_dir.join(entry_file).to_str().unwrap().to_string());
+    verus_args.append(&mut vec!["--cfg".to_string(), "erasure_macro_todo".to_string()]);
 
     if import_vstd {
         let lib_vstd_vir_path = target_dir.join("vstd.vir");
@@ -233,7 +234,6 @@ pub fn verify_files_vstd(
         ]);
     }
 
-
     let mut child = std::process::Command::new(bin)
         .env("VERUS_Z3_PATH", "../z3")
         .args(&verus_args[..])
@@ -245,6 +245,7 @@ pub fn verify_files_vstd(
     let rust_output = std::str::from_utf8(&run.stderr[..]).unwrap().trim();
 
     let mut errors = Vec::new();
+    let mut expand_errors_notes = Vec::new();
     let aborting_due_to_re = regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?").unwrap();
 
     let mut is_failure = run.status.code().unwrap() != 0;
@@ -255,6 +256,13 @@ pub fn verify_files_vstd(
             let diag: Result<Diagnostic, _> = serde_json::from_str(ss);
             if let Ok(diag) = diag {
                 eprintln!("{}", diag.rendered);
+                if diag.level == "note" && (
+                    diag.message == "split assertion failure" ||
+                    diag.message == "split precondition failure" ||
+                    diag.message == "split postcondition failure") { // TODO define in defs
+                    expand_errors_notes.push(diag);
+                    continue;
+                }
                 if diag.level == "failure-note" || diag.level == "note" || diag.level == "warning" {
                     continue;
                 }
@@ -277,6 +285,7 @@ pub fn verify_files_vstd(
     if is_failure {
         Err(TestErr {
             errors,
+            expand_errors_notes,
         })
     } else {
         Ok(())
@@ -370,13 +379,12 @@ pub fn assert_one_fails(err: TestErr) {
 /// assert that all spans are properly reported (All spans are respoinsible to the verification failure)
 #[allow(dead_code)]
 pub fn assert_expand_fails(err: TestErr, span_count: usize) {
-    todo!();
-    // TODO assert_eq!(err.expand_errors.len(), 1);
-    // TODO let expand_errors = err.expand_errors.first().expect("EXPAND-ERRORS");
-    // TODO assert_eq!(expand_errors.len(), span_count);
-    // TODO for c in 0..span_count {
-    // TODO     assert!(&expand_errors[c].test_span_line.contains("EXPAND-ERRORS"));
-    // TODO }
+    assert_eq!(err.expand_errors_notes.len(), 1);
+    let expand_errors_diag = &err.expand_errors_notes.last().unwrap();
+    assert_eq!(expand_errors_diag.spans.len(), span_count);
+    for c in 0..span_count {
+        assert!(&expand_errors_diag.spans[c].text[0].text.contains("EXPAND-ERRORS"));
+    }
 }
 
 /// Assert that `count` verification failures happened on source lines containin the string "FAILS".
