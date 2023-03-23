@@ -356,7 +356,7 @@ macro_rules! test_verify_one_file {
     };
 }
 
-fn relevant_error_span(err: &Vec<DiagnosticSpan>) -> &DiagnosticSpan {
+pub fn relevant_error_span(err: &Vec<DiagnosticSpan>) -> &DiagnosticSpan {
     if let Some(e) = err.iter().find(|e| e.label == Some("at this exit".to_string())) {
         return e;
     } else if let Some(e) = err.iter().find(|e| {
