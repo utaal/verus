@@ -255,11 +255,10 @@ pub(crate) fn qpath_to_ident<'tcx>(
 
 pub(crate) fn is_visibility_private<'tcx>(ctxt: &Context<'tcx>, def_id: DefId, inherited_is_private: bool) -> bool {
     let vis = ctxt.tcx.visibility(def_id);
-    // TODO inherited_is_private
     match vis {
         Visibility::Public => false,
         // TODO reject pub(crate)?
-        Visibility::Restricted(_) => true,
+        Visibility::Restricted(_) => inherited_is_private,
     }
 }
 
