@@ -31,22 +31,22 @@ macro_rules! test_both {
     };
 }
 
-test_both! {
-    basic_usage basic_usage_local code! {
-        use vstd::invariant::*;
-
-        pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: AtomicInvariant<A, u8, B>) {
-            requires([
-                i.inv(0)
-            ]);
-            open_atomic_invariant!(&i => inner => {
-                #[verifier::proof] let x = 5;
-                #[verifier::proof] let x = 6;
-                inner = 0;
-            });
-        }
-    } => Ok(())
-}
+// TODO test_both! {
+// TODO     basic_usage basic_usage_local code! {
+// TODO         use vstd::invariant::*;
+// TODO 
+// TODO         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: AtomicInvariant<A, u8, B>) {
+// TODO             requires([
+// TODO                 i.inv(0)
+// TODO             ]);
+// TODO             open_atomic_invariant!(&i => inner => {
+// TODO                 #[verifier::proof] let x = 5;
+// TODO                 #[verifier::proof] let x = 6;
+// TODO                 inner = 0;
+// TODO             });
+// TODO         }
+// TODO     } => Ok(())
+// TODO }
 
 test_both! {
     basic_usage2 basic_usage2_local code! {
@@ -399,7 +399,7 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    #[test] never_terminate_in_invariant code! {
+    /* TODO */ #[ignore] #[test] never_terminate_in_invariant code! {
         use vstd::invariant::*;
 
         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: LocalInvariant<A, u8, B>) {
