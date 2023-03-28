@@ -18,16 +18,16 @@ use crate::util::{
 use crate::{unsupported, unsupported_err, unsupported_err_unless, unsupported_unless};
 use air::ast::{Binder, BinderX};
 use air::ast_util::str_ident;
-use rustc_ast::{Attribute, BorrowKind, LitKind, Mutability, ByRef};
+use rustc_ast::{Attribute, BorrowKind, ByRef, LitKind, Mutability};
 use rustc_hir::def::{DefKind, Res};
 use rustc_hir::{
-    BinOpKind, BindingAnnotation, Block, Destination, Expr, ExprKind, Guard, HirId, Local,
-    LoopSource, Node, Pat, PatKind, QPath, Stmt, StmtKind, UnOp, Let, Closure,
+    BinOpKind, BindingAnnotation, Block, Closure, Destination, Expr, ExprKind, Guard, HirId, Let,
+    Local, LoopSource, Node, Pat, PatKind, QPath, Stmt, StmtKind, UnOp,
 };
 
 use crate::rust_intrinsics_to_vir::int_intrinsic_constant_to_vir;
 use rustc_middle::ty::subst::GenericArgKind;
-use rustc_middle::ty::{PredicateKind, TyCtxt, TyKind, Clause, EarlyBinder};
+use rustc_middle::ty::{Clause, EarlyBinder, PredicateKind, TyCtxt, TyKind};
 use rustc_span::def_id::DefId;
 use rustc_span::source_map::Spanned;
 use rustc_span::symbol::Symbol;
@@ -1213,7 +1213,8 @@ fn fn_call_to_vir<'tcx>(
     }
 
     // TODO is calling `subst` still correct with the new API?
-    let raw_inputs = EarlyBinder(bctx.ctxt.tcx.fn_sig(f)).subst(tcx, node_substs).skip_binder().inputs();
+    let raw_inputs =
+        EarlyBinder(bctx.ctxt.tcx.fn_sig(f)).subst(tcx, node_substs).skip_binder().inputs();
     assert!(raw_inputs.len() == args.len());
     let mut vir_args = args
         .iter()
@@ -1943,7 +1944,12 @@ pub(crate) fn invariant_block_open<'a>(
                                 },
                                 inner_pat @ Pat {
                                     kind:
-                                        PatKind::Binding(BindingAnnotation(_, Mutability::Mut), inner_hir, _, None),
+                                        PatKind::Binding(
+                                            BindingAnnotation(_, Mutability::Mut),
+                                            inner_hir,
+                                            _,
+                                            None,
+                                        ),
                                     default_binding_modes: true,
                                     ..
                                 },
@@ -2635,8 +2641,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                             panic!("assignment to non-local");
                         };
                         if not_mut {
-                            match bctx.ctxt.tcx.hir().get_parent(*id)
-                            {
+                            match bctx.ctxt.tcx.hir().get_parent(*id) {
                                 Node::Param(_) => {
                                     err_span_str(lhs.span, "cannot assign to non-mut parameter")?
                                 }
@@ -2960,7 +2965,8 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                             assert!(other_args.len() == 2);
                             vir::ast::BuiltinSpecFun::ClosureEns
                         };
-                        let vir_args = std::iter::once(*receiver).chain(other_args.iter())
+                        let vir_args = std::iter::once(*receiver)
+                            .chain(other_args.iter())
                             .map(|arg| expr_to_vir(bctx, &arg, ExprModifier::REGULAR))
                             .collect::<Result<Vec<_>, _>>()?;
 
@@ -3055,7 +3061,11 @@ fn unwrap_parameter_to_vir<'tcx>(
     // match "let x;"
     let x = if let StmtKind::Local(Local {
         pat:
-            pat @ Pat { kind: PatKind::Binding(BindingAnnotation(ByRef::No, Mutability::Not), hir_id, x, None), .. },
+            pat @ Pat {
+                kind:
+                    PatKind::Binding(BindingAnnotation(ByRef::No, Mutability::Not), hir_id, x, None),
+                ..
+            },
         ty: None,
         init: None,
         ..
@@ -3083,8 +3093,7 @@ fn unwrap_parameter_to_vir<'tcx>(
                                             ExprKind::MethodCall(
                                                 _ident,
                                                 expr_y @ Expr {
-                                                    kind: ExprKind::Path(path_y),
-                                                    ..
+                                                    kind: ExprKind::Path(path_y), ..
                                                 },
                                                 [],
                                                 _span2,

@@ -1,8 +1,8 @@
 use crate::util::signalling;
 use crate::verifier::{Verifier, VerifierCallbacksEraseMacro};
+use rustc_errors::ErrorGuaranteed;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use rustc_errors::ErrorGuaranteed;
 
 fn mk_compiler<'a, 'b>(
     rustc_args: &'a [String],
@@ -121,8 +121,7 @@ pub(crate) fn run_with_erase_macro_compile(
     file_loader: Box<dyn 'static + rustc_span::source_map::FileLoader + Send + Sync>,
     compile: bool,
 ) -> Result<(), ErrorGuaranteed> {
-    let mut callbacks =
-        CompilerCallbacksEraseMacro { lifetimes_only: !compile };
+    let mut callbacks = CompilerCallbacksEraseMacro { lifetimes_only: !compile };
     rustc_args.extend(["--cfg", "verus_macro_erase_ghost"].map(|s| s.to_string()));
     let allow = &[
         "unused_imports",
@@ -186,11 +185,8 @@ where
         );
     }
 
-    let compile_status = run_with_erase_macro_compile(
-        rustc_args,
-        Box::new(file_loader),
-        verifier.args.compile,
-    );
+    let compile_status =
+        run_with_erase_macro_compile(rustc_args, Box::new(file_loader), verifier.args.compile);
 
     let time3 = Instant::now();
 

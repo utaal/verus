@@ -34,7 +34,7 @@ macro_rules! test_both {
 // TODO test_both! {
 // TODO     basic_usage basic_usage_local code! {
 // TODO         use vstd::invariant::*;
-// TODO 
+// TODO
 // TODO         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: AtomicInvariant<A, u8, B>) {
 // TODO             requires([
 // TODO                 i.inv(0)

@@ -21,8 +21,7 @@ use crate::{err_unless, unsupported_err, unsupported_err_unless};
 use rustc_ast::IsAuto;
 use rustc_hir::{
     AssocItemKind, ForeignItem, ForeignItemId, ForeignItemKind, ImplItemKind, Item, ItemId,
-    ItemKind, OwnerNode, QPath, TraitFn, TraitItem, TraitItemKind, TraitRef, Unsafety,
-    MaybeOwner
+    ItemKind, MaybeOwner, OwnerNode, QPath, TraitFn, TraitItem, TraitItemKind, TraitRef, Unsafety,
 };
 
 use std::collections::HashMap;
@@ -43,8 +42,11 @@ fn check_item<'tcx>(
         if let Some(Some(path)) = mpath {
             path.clone()
         } else {
-            let owned_by =
-                ctxt.krate.owners[item.hir_id().owner.def_id].as_owner().as_ref().expect("owner of item").node();
+            let owned_by = ctxt.krate.owners[item.hir_id().owner.def_id]
+                .as_owner()
+                .as_ref()
+                .expect("owner of item")
+                .node();
             def_id_to_vir_path(ctxt.tcx, owned_by.def_id().to_def_id())
         }
     };
@@ -239,8 +241,12 @@ fn check_item<'tcx>(
                 match impl_item_ref.kind {
                     AssocItemKind::Fn { has_self: true | false } => {
                         let impl_item = ctxt.tcx.hir().impl_item(impl_item_ref.id);
-                        let mut impl_item_visibility =
-                            mk_visibility(&ctxt, &Some(module_path()), true, impl_item.owner_id.to_def_id()); // TODO correct?
+                        let mut impl_item_visibility = mk_visibility(
+                            &ctxt,
+                            &Some(module_path()),
+                            true,
+                            impl_item.owner_id.to_def_id(),
+                        ); // TODO correct?
                         match &impl_item.kind {
                             ImplItemKind::Fn(sig, body_id) => {
                                 let fn_attrs = ctxt.tcx.hir().attrs(impl_item.hir_id());
@@ -251,9 +257,9 @@ fn check_item<'tcx>(
                                         fn_item_hir_id_to_self_def_id(ctxt.tcx, impl_item.hir_id())
                                             .map(|self_def_id| ctxt.tcx.adt_def(self_def_id))
                                             .and_then(|adt| {
-                                                adt.variants()
-                                                    .iter()
-                                                    .find(|v| v.ident(ctxt.tcx).as_str() == variant_name)
+                                                adt.variants().iter().find(|v| {
+                                                    v.ident(ctxt.tcx).as_str() == variant_name
+                                                })
                                             })
                                     };
                                     let valid = if let Some(variant_name) = fn_vattrs.is_variant {
@@ -270,7 +276,8 @@ fn check_item<'tcx>(
                                         find_variant(&variant_name)
                                             .and_then(|variant| {
                                                 variant.fields.iter().find(|f| {
-                                                    f.ident(ctxt.tcx).as_str() == field_name_str.as_str()
+                                                    f.ident(ctxt.tcx).as_str()
+                                                        == field_name_str.as_str()
                                                 })
                                             })
                                             .is_some()
@@ -398,8 +405,14 @@ fn check_item<'tcx>(
             let mut methods: Vec<Fun> = Vec::new();
             for trait_item_ref in *trait_items {
                 let trait_item = ctxt.tcx.hir().trait_item(trait_item_ref.id);
-                let TraitItem { ident: _, owner_id, generics: item_generics, kind, span, defaultness: _ } =
-                    trait_item;
+                let TraitItem {
+                    ident: _,
+                    owner_id,
+                    generics: item_generics,
+                    kind,
+                    span,
+                    defaultness: _,
+                } = trait_item;
                 let generics_bnds =
                     check_generics_bounds(ctxt.tcx, item_generics, false, owner_id.to_def_id())?;
                 unsupported_err_unless!(generics_bnds.len() == 0, *span, "trait generics");

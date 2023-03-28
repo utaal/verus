@@ -23,7 +23,8 @@ fn check_variant_data<'tcx, 'fd>(
     in_enum: bool,
     field_defs: impl Iterator<Item = &'fd rustc_middle::ty::FieldDef>,
 ) -> (Variant, bool)
-    where 'tcx: 'fd
+where
+    'tcx: 'fd,
 {
     // TODO handle field visibility; does rustc_middle::ty::Visibility have better visibility
     // information than hir?
@@ -43,7 +44,12 @@ fn check_variant_data<'tcx, 'fd>(
                             &(
                                 mid_ty_to_vir(ctxt.tcx, &field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
-                                mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
+                                mk_visibility(
+                                    ctxt,
+                                    &Some(module_path.clone()),
+                                    !in_enum,
+                                    field.def_id.to_def_id(),
+                                ),
                             ),
                         ),
                         is_visibility_private(ctxt, field.def_id.to_def_id(), !in_enum),
@@ -67,7 +73,12 @@ fn check_variant_data<'tcx, 'fd>(
                             &(
                                 mid_ty_to_vir(ctxt.tcx, &field_ty, false),
                                 get_mode(Mode::Exec, ctxt.tcx.hir().attrs(field.hir_id)),
-                                mk_visibility(ctxt, &Some(module_path.clone()), !in_enum, field.def_id.to_def_id()),
+                                mk_visibility(
+                                    ctxt,
+                                    &Some(module_path.clone()),
+                                    !in_enum,
+                                    field.def_id.to_def_id(),
+                                ),
                             ),
                         ),
                         is_visibility_private(ctxt, field.def_id.to_def_id(), !in_enum),
@@ -136,7 +147,8 @@ pub fn get_mid_variant_def_by_name<'tcx, 'df>(
     adt_def: &'df rustc_middle::ty::AdtDef,
     variant_name: &str,
 ) -> &'df rustc_middle::ty::VariantDef
-    where 'tcx: 'df
+where
+    'tcx: 'df,
 {
     for variant_def in adt_def.variants().iter() {
         if variant_def.ident(ctxt.tcx).name.as_str() == variant_name {

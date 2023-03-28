@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::StableCrateId;
 use rustc_span::source_map::SourceMap;
 use rustc_span::{BytePos, ExternalSource, Span, SpanData};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use vir::ast::{SpannedTyped, Typ};
@@ -74,12 +74,10 @@ impl<'a> Deserialize<'a> for FileStartEndPos {
             where
                 A: serde::de::SeqAccess<'de>,
             {
-                let start_pos = BytePos(seq
-                    .next_element()?
-                    .ok_or_else(|| A::Error::invalid_length(0, &self))?);
-                let end_pos = BytePos(seq
-                    .next_element()?
-                    .ok_or_else(|| A::Error::invalid_length(1, &self))?);
+                let start_pos =
+                    BytePos(seq.next_element()?.ok_or_else(|| A::Error::invalid_length(0, &self))?);
+                let end_pos =
+                    BytePos(seq.next_element()?.ok_or_else(|| A::Error::invalid_length(1, &self))?);
                 Ok(FileStartEndPos { start_pos, end_pos })
             }
         }
@@ -119,8 +117,10 @@ impl SpanContextX {
                     let imported_crate = tcx.stable_crate_id(source_file.cnum).to_u64();
                     let start_pos = source_file.start_pos;
                     let end_pos = source_file.end_pos;
-                    if let Some(original) = original_crate_files.get(&imported_crate).and_then(
-                        |x| x.get(&source_file.src_hash.hash_bytes().to_vec())) {
+                    if let Some(original) = original_crate_files
+                        .get(&imported_crate)
+                        .and_then(|x| x.get(&source_file.src_hash.hash_bytes().to_vec()))
+                    {
                         let extern_source_file = ExternSourceFile {
                             original_start_pos: original.start_pos,
                             original_end_pos: original.end_pos,
@@ -130,9 +130,13 @@ impl SpanContextX {
                         if !imported_crates.contains_key(&imported_crate) {
                             imported_crates.insert(imported_crate, CrateInfo { files: Vec::new() });
                         }
-                        imported_crates.get_mut(&imported_crate).unwrap().files.push(extern_source_file);
+                        imported_crates
+                            .get_mut(&imported_crate)
+                            .unwrap()
+                            .files
+                            .push(extern_source_file);
                     }
-                },
+                }
             }
         }
 
@@ -176,12 +180,9 @@ impl SpanContextX {
         let crate_id = packed[0];
         let original_lo = BytePos((packed[1] >> 32) as u32);
         let original_hi = BytePos(packed[1] as u32);
-        let ExternSourceFile {
-            original_start_pos,
-            original_end_pos,
-            start_pos,
-            end_pos, 
-        } = self.pos_to_extern_source_file(crate_id, original_lo).expect("span source file not found");
+        let ExternSourceFile { original_start_pos, original_end_pos, start_pos, end_pos } = self
+            .pos_to_extern_source_file(crate_id, original_lo)
+            .expect("span source file not found");
 
         assert!(original_start_pos <= original_lo);
         assert!(original_hi <= original_end_pos);

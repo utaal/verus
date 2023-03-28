@@ -116,13 +116,12 @@ use crate::spans::SpanContext;
 use crate::util::error;
 use crate::verifier::DiagnosticOutputBuffer;
 use air::messages::{message_bare, Message, MessageLevel};
-use rustc_hir::{AssocItemKind, Crate, ItemKind, OwnerNode, MaybeOwner};
+use rustc_hir::{AssocItemKind, Crate, ItemKind, MaybeOwner, OwnerNode};
 use rustc_middle::ty::TyCtxt;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Write;
 use vir::ast::VirErr;
-
 
 // Call Rust's mir_borrowck to check lifetimes of #[spec] and #[proof] code and variables
 pub(crate) fn check<'tcx>(queries: &'tcx verus_rustc_interface::Queries<'tcx>) {
@@ -140,7 +139,8 @@ pub(crate) fn check<'tcx>(queries: &'tcx verus_rustc_interface::Queries<'tcx>) {
                             for item in impll.items {
                                 match item.kind {
                                     AssocItemKind::Fn { .. } => {
-                                        tcx.ensure().mir_borrowck(item.id.owner_id.def_id); // TODO correct?
+                                        tcx.ensure().mir_borrowck(item.id.owner_id.def_id);
+                                        // TODO correct?
                                     }
                                     _ => {}
                                 }
@@ -294,11 +294,8 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
     if let Some(mut file) = lifetime_log_file {
         write!(file, "{}", &rust_code).expect("error writing to lifetime log file");
     }
-    let mut rustc_args = vec![
-        LIFETIME_DRIVER_ARG,
-        LifetimeFileLoader::FILENAME,
-        "--error-format=json",
-    ];
+    let mut rustc_args =
+        vec![LIFETIME_DRIVER_ARG, LifetimeFileLoader::FILENAME, "--error-format=json"];
 
     let mut child = std::process::Command::new(std::env::current_exe().unwrap())
         .args(&rustc_args[..])
@@ -308,7 +305,7 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
         .spawn()
         .expect("could not execute lifetime rustc process");
     let mut child_stdin = child.stdin.take().expect("take stdin");
-    // std::fs::write("/tmp/verus_lifetime_generate.rs", rust_code.clone()).unwrap(); 
+    // std::fs::write("/tmp/verus_lifetime_generate.rs", rust_code.clone()).unwrap();
     child_stdin.write(rust_code.as_bytes());
     std::mem::drop(child_stdin);
     let run = child.wait_with_output().expect("lifetime rustc wait failed");
@@ -350,5 +347,9 @@ pub(crate) fn check_tracked_lifetimes<'tcx>(
     if debug {
         dbg!(msgs.len());
     }
-    if msgs.len() == 0 && !run.status.success() { Err(error("lifetime checking failed")) } else { Ok(msgs) }
+    if msgs.len() == 0 && !run.status.success() {
+        Err(error("lifetime checking failed"))
+    } else {
+        Ok(msgs)
+    }
 }

@@ -33,7 +33,7 @@ pub fn main() {
                 std::io::stdin().read_to_string(&mut buffer).expect("cannot read stdin");
                 rust_verify::lifetime::lifetime_rustc_driver(&internal_args[..], buffer);
                 return;
-            },
+            }
             "--internal-build-vstd-driver" => {
                 let pervasive_path = internal_args.next().unwrap();
                 let vstd_vir = internal_args.next().unwrap();
@@ -55,13 +55,15 @@ pub fn main() {
                 our_args.compile = true;
 
                 {
-                    *air::smt_process::SMT_EXECUTABLE_NAME_OVERRIDE.write().unwrap() = Some(z3_path);
+                    *air::smt_process::SMT_EXECUTABLE_NAME_OVERRIDE.write().unwrap() =
+                        Some(z3_path);
                 }
 
                 let file_loader = PervasiveFileLoader::new(Some(pervasive_path.to_string()));
                 let verifier = Verifier::new(our_args);
                 dbg!(&internal_args);
-                let (_verifier, _stats, status) = rust_verify::driver::run(verifier, internal_args, file_loader);
+                let (_verifier, _stats, status) =
+                    rust_verify::driver::run(verifier, internal_args, file_loader);
                 status.expect("failed to build vstd library");
                 return;
             }

@@ -1,19 +1,17 @@
 use crate::attributes::get_verifier_attrs;
-use crate::context::{Context, BodyCtxt};
+use crate::context::{BodyCtxt, Context};
 use crate::util::{err_span_str, unsupported_err_span};
 use crate::{unsupported, unsupported_err_unless};
-use rustc_ast::{Mutability, ByRef};
+use rustc_ast::{ByRef, Mutability};
 use rustc_hir::definitions::DefPath;
-use rustc_hir::{
-    GenericParam, GenericParamKind, Generics, HirId, QPath, Ty,
-};
+use rustc_hir::{GenericParam, GenericParamKind, Generics, HirId, QPath, Ty};
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::ty::GenericParamDefKind;
-use rustc_middle::ty::ProjectionPredicate;
 use rustc_middle::ty::Projection;
-use rustc_middle::ty::{AdtDef, TyCtxt, TyKind};
-use rustc_middle::ty::{BoundConstness, ImplPolarity, PredicateKind, TraitPredicate, Clause};
+use rustc_middle::ty::ProjectionPredicate;
 use rustc_middle::ty::Visibility;
+use rustc_middle::ty::{AdtDef, TyCtxt, TyKind};
+use rustc_middle::ty::{BoundConstness, Clause, ImplPolarity, PredicateKind, TraitPredicate};
 use rustc_span::def_id::{DefId, LOCAL_CRATE};
 use rustc_span::symbol::{kw, Ident};
 use rustc_span::{Span, Symbol};
@@ -253,7 +251,11 @@ pub(crate) fn qpath_to_ident<'tcx>(
     }
 }
 
-pub(crate) fn is_visibility_private<'tcx>(ctxt: &Context<'tcx>, def_id: DefId, inherited_is_private: bool) -> bool {
+pub(crate) fn is_visibility_private<'tcx>(
+    ctxt: &Context<'tcx>,
+    def_id: DefId,
+    inherited_is_private: bool,
+) -> bool {
     let vis = ctxt.tcx.visibility(def_id);
     match vis {
         Visibility::Public => false,
@@ -479,8 +481,8 @@ pub(crate) fn mid_ty_const_to_vir<'tcx>(
     cnst: &rustc_middle::ty::Const<'tcx>,
 ) -> Typ {
     // use rustc_middle::mir::interpret::{ConstValue, Scalar};
-    use rustc_middle::ty::ValTree;
     use rustc_middle::ty::ConstKind;
+    use rustc_middle::ty::ValTree;
 
     let cnst = match cnst.kind() {
         ConstKind::Unevaluated(unevaluated) => cnst.eval(tcx, tcx.param_env(unevaluated.def.did)),
@@ -560,14 +562,13 @@ pub(crate) fn implements_structural<'tcx>(
     if ty.has_escaping_bound_vars() {
         return false;
     }
-    let ty_impls_structural = 
-        infcx
-            .type_implements_trait(
-                structural_def_id,
-                vec![ty].into_iter(),
-                rustc_middle::ty::ParamEnv::empty(),
-            )
-            .must_apply_modulo_regions();
+    let ty_impls_structural = infcx
+        .type_implements_trait(
+            structural_def_id,
+            vec![ty].into_iter(),
+            rustc_middle::ty::ParamEnv::empty(),
+        )
+        .must_apply_modulo_regions();
     ty_impls_structural
 }
 
@@ -674,7 +675,13 @@ pub(crate) fn check_generics_bounds<'tcx>(
     // so then we can handle the case where a method adds extra bounds to an impl
     // type parameter
 
-    let Generics { params: hir_params, has_where_clause_predicates: _, predicates: _, where_clause_span: _, span: _ } = hir_generics;
+    let Generics {
+        params: hir_params,
+        has_where_clause_predicates: _,
+        predicates: _,
+        where_clause_span: _,
+        span: _,
+    } = hir_generics;
     let generics = tcx.generics_of(def_id);
 
     let mut mid_params: Vec<&rustc_middle::ty::GenericParamDef> = vec![];
@@ -852,7 +859,15 @@ pub(crate) fn check_generics_bounds<'tcx>(
             );
         }
         let strictly_positive = !neg; // strictly_positive is the default
-        let GenericParam { hir_id: _, name: _, span, pure_wrt_drop, kind, def_id: _, colon_span: _ } = hir_param;
+        let GenericParam {
+            hir_id: _,
+            name: _,
+            span,
+            pure_wrt_drop,
+            kind,
+            def_id: _,
+            colon_span: _,
+        } = hir_param;
 
         unsupported_err_unless!(!pure_wrt_drop, *span, "generic pure_wrt_drop");
 
@@ -870,10 +885,7 @@ pub(crate) fn check_generics_bounds<'tcx>(
 
         match &mid_param.kind {
             GenericParamDefKind::Const { .. }
-            | GenericParamDefKind::Type {
-                has_default: false,
-                synthetic: true | false,
-            } => {
+            | GenericParamDefKind::Type { has_default: false, synthetic: true | false } => {
                 // trait/function bounds
                 let ident = Arc::new(generic_param_def_to_vir_name(mid_param));
 

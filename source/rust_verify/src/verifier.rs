@@ -12,10 +12,10 @@ use rustc_hir::OwnerNode;
 use verus_rustc_interface::interface::Compiler;
 
 use num_format::{Locale, ToFormattedString};
+use rustc_error_messages::MultiSpan;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::source_map::SourceMap;
 use rustc_span::{CharPos, FileName, Span};
-use rustc_error_messages::MultiSpan;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -72,9 +72,13 @@ impl Diagnostics for Reporter<'_> {
         }
 
         match level {
-            MessageLevel::Note => self.compiler_diagnostics.span_note_without_error(multispan, &msg.note),
+            MessageLevel::Note => {
+                self.compiler_diagnostics.span_note_without_error(multispan, &msg.note)
+            }
             MessageLevel::Warning => self.compiler_diagnostics.span_warn(multispan, &msg.note),
-            MessageLevel::Error => { self.compiler_diagnostics.span_err(multispan, &msg.note); },
+            MessageLevel::Error => {
+                self.compiler_diagnostics.span_err(multispan, &msg.note);
+            }
         }
     }
 }
@@ -1329,7 +1333,11 @@ impl Verifier {
                 .iter()
                 .filter_map(|oi| {
                     oi.as_owner().as_ref().and_then(|o| {
-                        if let OwnerNode::Crate(c) = o.node() { Some(c.spans.inner_span) } else { None }
+                        if let OwnerNode::Crate(c) = o.node() {
+                            Some(c.spans.inner_span)
+                        } else {
+                            None
+                        }
                     })
                 })
                 .next()
@@ -1427,10 +1435,7 @@ impl Verifier {
             }
         }
         check_crate_result?;
-        let (erasure_modes, inferred_modes) = vir::modes::check_crate(
-            &vir_crate,
-            true
-        )?;
+        let (erasure_modes, inferred_modes) = vir::modes::check_crate(&vir_crate, true)?;
         let vir_crate = vir::traits::demote_foreign_traits(&vir_crate)?;
 
         self.vir_crate = Some(vir_crate.clone());
@@ -1498,7 +1503,8 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
         if !compiler.session().compile_status().is_ok() {
             return verus_rustc_driver::Compilation::Stop;
         }
-        let crate_name: String = queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO correct?
+        let crate_name: String =
+            queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO correct?
 
         let _result = queries.global_ctxt().expect("global_ctxt").enter(|tcx| {
             let imported = match crate::import_export::import_crates(&self.verifier.args) {
@@ -1519,9 +1525,14 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
             );
             {
                 let reporter = Reporter::new(&spans, compiler);
-                if let Err(err) =
-                    self.verifier.construct_vir_crate(tcx, &spans, imported.crate_names, imported.vir_crates, &reporter, crate_name.clone())
-                {
+                if let Err(err) = self.verifier.construct_vir_crate(
+                    tcx,
+                    &spans,
+                    imported.crate_names,
+                    imported.vir_crates,
+                    &reporter,
+                    crate_name.clone(),
+                ) {
                     reporter.report_as(&err, MessageLevel::Error);
                     self.verifier.encountered_vir_error = true;
                     return;

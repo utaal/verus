@@ -11,7 +11,7 @@ use crate::{unsupported, unsupported_err, unsupported_err_unless, unsupported_un
 use rustc_ast::Attribute;
 use rustc_hir::{
     def::Res, Body, BodyId, Crate, FnDecl, FnHeader, FnRetTy, FnSig, Generics, ImplicitSelfKind,
-    Param, PrimTy, QPath, Ty, TyKind, Unsafety, MaybeOwner, MutTy,
+    MaybeOwner, MutTy, Param, PrimTy, QPath, Ty, TyKind, Unsafety,
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_span::symbol::{Ident, Symbol};
@@ -118,8 +118,8 @@ fn check_new_strlit<'tcx>(ctx: &Context<'tcx>, sig: &'tcx FnSig<'tcx>) -> Result
         TyKind::Ref(_, MutTy { ty, mutbl }) => (&ty.kind, ty.span),
         _ => {
             dbg!(&decl.inputs[0]);
-            return err_span_string(decl.inputs[0].span, format!("expected a str"))
-        },
+            return err_span_string(decl.inputs[0].span, format!("expected a str"));
+        }
     };
 
     let (res, span) = match kind {

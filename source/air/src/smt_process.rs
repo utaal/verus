@@ -2,7 +2,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout};
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-pub static SMT_EXECUTABLE_NAME_OVERRIDE: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
+pub static SMT_EXECUTABLE_NAME_OVERRIDE: std::sync::RwLock<Option<String>> =
+    std::sync::RwLock::new(None);
 
 fn smt_executable_name() -> String {
     let override_path = { SMT_EXECUTABLE_NAME_OVERRIDE.read().unwrap().clone() };

@@ -130,7 +130,14 @@ pub fn verify_files_vstd(
     let deps_path = current_exe.parent().unwrap();
     let target_path = deps_path.parent().unwrap();
     let profile = target_path.file_name().unwrap().to_str().unwrap();
-    let verus_target_path = target_path.parent().unwrap().parent().unwrap().to_path_buf().join("target-verus").join(profile);
+    let verus_target_path = target_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf()
+        .join("target-verus")
+        .join(profile);
 
     fn wait_exists(path: &std::path::Path) {
         while !path.exists() {
@@ -146,7 +153,8 @@ pub fn verify_files_vstd(
     wait_exists(&lib_builtin_macros_path);
     assert!(lib_builtin_macros_path.exists());
     let lib_builtin_macros_path = lib_builtin_macros_path.to_str().unwrap();
-    let lib_state_machines_macros_path = verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
+    let lib_state_machines_macros_path =
+        verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
     wait_exists(&lib_state_machines_macros_path);
     assert!(lib_state_machines_macros_path.exists());
     let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
@@ -177,12 +185,13 @@ pub fn verify_files_vstd(
 
     for (file_name, file_contents) in files {
         use std::io::Write;
-        let mut f = std::fs::File::create(test_input_dir.join(file_name)).expect("failed to create test file");
+        let mut f = std::fs::File::create(test_input_dir.join(file_name))
+            .expect("failed to create test file");
         f.write_all(file_contents.as_bytes()).expect("failed to write test file contents");
     }
 
     let mut verus_args = Vec::new();
-    
+
     for option in options.iter() {
         if *option == "--expand-errors" {
             verus_args.push("--expand-errors".to_string());
@@ -200,22 +209,25 @@ pub fn verify_files_vstd(
             panic!("option '{}' not recognized by test harness", option);
         }
     }
-    
-    verus_args.extend(vec![
-        "--edition".to_string(),
-        "2018".to_string(),
-        "--crate-name".to_string(),
-        "test_crate".to_string(),
-        "--crate-type".to_string(),
-        "lib".to_string(),
-        "--extern".to_string(),
-        format!("builtin={lib_builtin_path}"),
-        "--extern".to_string(),
-        format!("builtin_macros={lib_builtin_macros_path}"),
-        "--extern".to_string(),
-        format!("state_machines_macros={lib_state_machines_macros_path}"),
-        "--error-format=json".to_string(),
-    ].into_iter());
+
+    verus_args.extend(
+        vec![
+            "--edition".to_string(),
+            "2018".to_string(),
+            "--crate-name".to_string(),
+            "test_crate".to_string(),
+            "--crate-type".to_string(),
+            "lib".to_string(),
+            "--extern".to_string(),
+            format!("builtin={lib_builtin_path}"),
+            "--extern".to_string(),
+            format!("builtin_macros={lib_builtin_macros_path}"),
+            "--extern".to_string(),
+            format!("state_machines_macros={lib_state_machines_macros_path}"),
+            "--error-format=json".to_string(),
+        ]
+        .into_iter(),
+    );
 
     verus_args.push(test_input_dir.join(entry_file).to_str().unwrap().to_string());
     verus_args.append(&mut vec!["--cfg".to_string(), "erasure_macro_todo".to_string()]);
@@ -246,7 +258,8 @@ pub fn verify_files_vstd(
 
     let mut errors = Vec::new();
     let mut expand_errors_notes = Vec::new();
-    let aborting_due_to_re = regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?").unwrap();
+    let aborting_due_to_re =
+        regex::Regex::new(r"^aborting due to( [0-9]+)? previous errors?").unwrap();
 
     let mut is_failure = run.status.code().unwrap() != 0;
 
@@ -256,10 +269,12 @@ pub fn verify_files_vstd(
             let diag: Result<Diagnostic, _> = serde_json::from_str(ss);
             if let Ok(diag) = diag {
                 eprintln!("{}", diag.rendered);
-                if diag.level == "note" && (
-                    diag.message == "split assertion failure" ||
-                    diag.message == "split precondition failure" ||
-                    diag.message == "split postcondition failure") { // TODO define in defs
+                if diag.level == "note"
+                    && (diag.message == "split assertion failure"
+                        || diag.message == "split precondition failure"
+                        || diag.message == "split postcondition failure")
+                {
+                    // TODO define in defs
                     expand_errors_notes.push(diag);
                     continue;
                 }
@@ -282,14 +297,7 @@ pub fn verify_files_vstd(
         std::fs::remove_dir_all(&test_input_dir);
     }
 
-    if is_failure {
-        Err(TestErr {
-            errors,
-            expand_errors_notes,
-        })
-    } else {
-        Ok(())
-    }
+    if is_failure { Err(TestErr { errors, expand_errors_notes }) } else { Ok(()) }
 }
 
 #[allow(dead_code)]
@@ -308,14 +316,7 @@ pub const USE_PRELUDE: &str = crate::common::code_str! {
 #[allow(dead_code)]
 pub fn verify_one_file(name: &str, code: String, options: &[&str]) -> Result<(), TestErr> {
     let vstd = code.contains("vstd::") || code.contains("pervasive::") || options.contains(&"vstd");
-    let files = vec![(
-        "test.rs".to_string(),
-        format!(
-            "{}\n{}",
-            USE_PRELUDE,
-            code.as_str()
-        ),
-    )];
+    let files = vec![("test.rs".to_string(), format!("{}\n{}", USE_PRELUDE, code.as_str()))];
     verify_files_vstd(name, files, "test.rs".to_string(), vstd, options)
 }
 
@@ -360,19 +361,27 @@ pub fn relevant_error_span(err: &Vec<DiagnosticSpan>) -> &DiagnosticSpan {
     if let Some(e) = err.iter().find(|e| e.label == Some("at this exit".to_string())) {
         return e;
     } else if let Some(e) = err.iter().find(|e| {
-        e.label == Some(vir::def::THIS_POST_FAILED.to_string())
-            && !e.text[0].text.contains("TRAIT")
+        e.label == Some(vir::def::THIS_POST_FAILED.to_string()) && !e.text[0].text.contains("TRAIT")
     }) {
         return e;
     }
-    err.iter().filter(|e| e.label != Some(vir::def::THIS_PRE_FAILED.to_string())).next().expect("span")
+    err.iter()
+        .filter(|e| e.label != Some(vir::def::THIS_PRE_FAILED.to_string()))
+        .next()
+        .expect("span")
 }
 
 /// Assert that one verification failure happened on source lines containin the string "FAILS".
 #[allow(dead_code)]
 pub fn assert_one_fails(err: TestErr) {
     assert_eq!(err.errors.len(), 1);
-    assert!(relevant_error_span(&err.errors[0].spans).text.iter().find(|x| x.text.contains("FAILS")).is_some());
+    assert!(
+        relevant_error_span(&err.errors[0].spans)
+            .text
+            .iter()
+            .find(|x| x.text.contains("FAILS"))
+            .is_some()
+    );
 }
 
 /// When this testcase has ONE verification failure,
@@ -392,7 +401,13 @@ pub fn assert_expand_fails(err: TestErr, span_count: usize) {
 pub fn assert_fails(err: TestErr, count: usize) {
     assert_eq!(err.errors.len(), count);
     for c in 0..count {
-        assert!(relevant_error_span(&err.errors[c].spans).text.iter().find(|x| x.text.contains("FAILS")).is_some());
+        assert!(
+            relevant_error_span(&err.errors[c].spans)
+                .text
+                .iter()
+                .find(|x| x.text.contains("FAILS"))
+                .is_some()
+        );
     }
 }
 

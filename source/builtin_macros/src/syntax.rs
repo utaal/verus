@@ -1655,23 +1655,29 @@ impl VisitMut for Visitor {
                                     let rest = &meta_list.nested[0];
                                     (&meta_list.path.segments[0], Some(quote! { (#rest) }))
                                 }
-                                syn_verus::NestedMeta::Meta(syn_verus::Meta::Path(meta_path)) =>
-                                    (&meta_path.segments[0], None),
+                                syn_verus::NestedMeta::Meta(syn_verus::Meta::Path(meta_path)) => {
+                                    (&meta_path.segments[0], None)
+                                }
                                 _ => {
                                     panic!("invalid verifier attribute (1)"); // TODO use compile_error! if possible
                                 }
                             };
                             let mut path_segments = Punctuated::new();
-                            path_segments
-                                .push(PathSegment { ident: Ident::new("verifier", span), arguments: PathArguments::None });
-                            path_segments
-                                .push(second_segment.clone());
+                            path_segments.push(PathSegment {
+                                ident: Ident::new("verifier", span),
+                                arguments: PathArguments::None,
+                            });
+                            path_segments.push(second_segment.clone());
                             *attr = Attribute {
                                 pound_token: token::Pound { spans: [span] },
                                 style: AttrStyle::Outer,
                                 bracket_token: token::Bracket { span },
                                 path: Path { leading_colon: None, segments: path_segments },
-                                tokens: if let Some(nested) = nested { quote! { #nested } } else { quote! {} },
+                                tokens: if let Some(nested) = nested {
+                                    quote! { #nested }
+                                } else {
+                                    quote! {}
+                                },
                             };
                         }
                         _ => panic!("invalid verifier attribute (2)"), // TODO use compile_error! if possible

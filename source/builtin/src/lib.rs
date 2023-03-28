@@ -1005,7 +1005,9 @@ impl<Args: core::marker::Tuple, Output> Fn<Args> for FnSpec<Args, Output> {
 }
 
 #[rustc_diagnostic_item = "builtin::closure_to_fn_spec"]
-pub fn closure_to_fn_spec<Args: core::marker::Tuple, F: FnOnce<Args>>(_f: F) -> FnSpec<Args, F::Output> {
+pub fn closure_to_fn_spec<Args: core::marker::Tuple, F: FnOnce<Args>>(
+    _f: F,
+) -> FnSpec<Args, F::Output> {
     unimplemented!();
 }
 

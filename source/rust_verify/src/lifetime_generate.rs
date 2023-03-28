@@ -10,15 +10,15 @@ use air::ast::AstId;
 use rustc_ast::{BorrowKind, IsAuto, Mutability};
 use rustc_hir::def::{CtorKind, DefKind, Res};
 use rustc_hir::{
-    AssocItemKind, BindingAnnotation, Block, BlockCheckMode, BodyId, Crate, Expr, ExprKind, FnSig,
-    HirId, Impl, ImplItem, ImplItemKind, ItemKind, Node, OwnerNode, Pat, PatKind, QPath, Stmt,
-    StmtKind, TraitFn, TraitItem, TraitItemKind, TraitItemRef, TraitRef, UnOp, Unsafety,
-    Closure, Let, MaybeOwner,
+    AssocItemKind, BindingAnnotation, Block, BlockCheckMode, BodyId, Closure, Crate, Expr,
+    ExprKind, FnSig, HirId, Impl, ImplItem, ImplItemKind, ItemKind, Let, MaybeOwner, Node,
+    OwnerNode, Pat, PatKind, QPath, Stmt, StmtKind, TraitFn, TraitItem, TraitItemKind,
+    TraitItemRef, TraitRef, UnOp, Unsafety,
 };
 use rustc_middle::ty::subst::GenericArgKind;
 use rustc_middle::ty::{
-    AdtDef, BoundRegionKind, BoundVariableKind, GenericParamDefKind, PredicateKind, RegionKind, Ty,
-    TyCtxt, TyKind, TypeckResults, VariantDef, Clause,
+    AdtDef, BoundRegionKind, BoundVariableKind, Clause, GenericParamDefKind, PredicateKind,
+    RegionKind, Ty, TyCtxt, TyKind, TypeckResults, VariantDef,
 };
 use rustc_span::def_id::DefId;
 use rustc_span::symbol::kw;
@@ -235,7 +235,9 @@ fn add_copy_type(tcx: TyCtxt, id: DefId, copy_types: &mut HashSet<DefId>) {
                         }
                     }
                     for (pred, _) in tcx.predicates_of(id).predicates {
-                        if let Some(PredicateKind::Clause(Clause::Trait(p))) = pred.kind().no_bound_vars() {
+                        if let Some(PredicateKind::Clause(Clause::Trait(p))) =
+                            pred.kind().no_bound_vars()
+                        {
                             let pid = p.trait_ref.def_id;
                             // For now, only allowed predicates are Copy and Sized
                             if Some(pid) == copy || Some(pid) == sized {
@@ -289,9 +291,9 @@ fn erase_ty<'tcx>(ctxt: &Context<'tcx>, state: &mut State, ty: &Ty<'tcx>) -> Typ
             Box::new(TypX::Ref(erase_ty(ctxt, state, t), lifetime, *mutability))
         }
         TyKind::Slice(t) => Box::new(TypX::Slice(erase_ty(ctxt, state, t))),
-        TyKind::Tuple(_) => {
-            Box::new(TypX::Tuple(ty.tuple_fields().iter().map(|t| erase_ty(ctxt, state, &t)).collect()))
-        }
+        TyKind::Tuple(_) => Box::new(TypX::Tuple(
+            ty.tuple_fields().iter().map(|t| erase_ty(ctxt, state, &t)).collect(),
+        )),
         TyKind::Adt(AdtDef(adt_def_data), args) => {
             let did = adt_def_data.did;
             state.reach_datatype(ctxt, did);
@@ -552,7 +554,11 @@ fn erase_call<'tcx>(
     match call {
         ResolvedCall::Spec => None,
         ResolvedCall::SpecAllowProofArgs => {
-            let exps = receiver.into_iter().chain(args_slice.iter()).map(|a| erase_expr(ctxt, state, expect_spec, a)).collect(); // TODO correct?
+            let exps = receiver
+                .into_iter()
+                .chain(args_slice.iter())
+                .map(|a| erase_expr(ctxt, state, expect_spec, a))
+                .collect(); // TODO correct?
             erase_spec_exps_typ(ctxt, state, expr.span, |_| TypX::mk_unit(), exps, false)
         }
         ResolvedCall::CompilableOperator(op) => {
@@ -571,8 +577,7 @@ fn erase_call<'tcx>(
                 assert!(receiver.is_some());
                 assert!(args_slice.len() == 0);
                 let Some(receiver) = receiver else { panic!() };
-                let exp =
-                    erase_expr(ctxt, state, expect_spec, &receiver).expect("builtin method");
+                let exp = erase_expr(ctxt, state, expect_spec, &receiver).expect("builtin method");
                 mk_exp(ExpX::BuiltinMethod(exp, method.to_string()))
             } else if let GhostExec = op {
                 Some(erase_spec_exps_force(ctxt, state, expr, vec![]))
@@ -777,9 +782,7 @@ fn erase_expr<'tcx>(
         ExprKind::Path(QPath::Resolved(None, path)) => {
             match path.res {
                 Res::Local(id) => match ctxt.tcx.hir().get(id) {
-                    Node::Pat(Pat {
-                        kind: PatKind::Binding(_ann, id, ident, _pat), ..
-                    }) => {
+                    Node::Pat(Pat { kind: PatKind::Binding(_ann, id, ident, _pat), .. }) => {
                         if expect_spec || ctxt.var_modes[&expr.hir_id] == Mode::Spec {
                             None
                         } else {
@@ -1115,7 +1118,12 @@ fn erase_expr<'tcx>(
             let exp = erase_expr(ctxt, state, ctxt.ret_spec.expect("ret_spec"), expr);
             mk_exp(ExpX::Ret(exp))
         }
-        ExprKind::Closure(Closure { capture_clause: capture_by, body: body_id, movability, .. }) => {
+        ExprKind::Closure(Closure {
+            capture_clause: capture_by,
+            body: body_id,
+            movability,
+            ..
+        }) => {
             let mut params: Vec<(Span, Id, Typ)> = Vec::new();
             let body = ctxt.tcx.hir().body(*body_id);
             let ps = &body.params;

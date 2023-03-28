@@ -10,8 +10,8 @@ use air::ast::AstId;
 use rustc_ast::ast::{
     AngleBracketedArg, AngleBracketedArgs, Arm, AssocItem, AssocItemKind, BinOpKind, Block, Crate,
     EnumDef, Expr, ExprField, ExprKind, FieldDef, FnDecl, FnRetTy, FnSig, GenericArg, GenericArgs,
-    GenericParam, GenericParamKind, Generics, Impl, Item, ItemKind, LitIntType, LitKind,
-    Local, LocalKind, ModKind, NodeId, Param, Pat, PatField, PatKind, PathSegment, Stmt, StmtKind,
+    GenericParam, GenericParamKind, Generics, Impl, Item, ItemKind, LitIntType, LitKind, Local,
+    LocalKind, ModKind, NodeId, Param, Pat, PatField, PatKind, PathSegment, Stmt, StmtKind,
     StructExpr, StructRest, Trait, Ty, TyKind, Variant, VariantData,
 };
 use rustc_ast::ptr::P;

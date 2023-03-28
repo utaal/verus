@@ -39,8 +39,16 @@ fn main() {
 
     let profile = std::env::var("PROFILE").unwrap();
 
-    let target_path = std::path::Path::new(&out_dir).parent().unwrap().parent().unwrap().parent().unwrap();
-    let verus_target_path = target_path.parent().unwrap().parent().unwrap().to_path_buf().join("target-verus").join(profile);
+    let target_path =
+        std::path::Path::new(&out_dir).parent().unwrap().parent().unwrap().parent().unwrap();
+    let verus_target_path = target_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf()
+        .join("target-verus")
+        .join(profile);
 
     let lib_builtin_path = verus_target_path.join(format!("{}builtin.rlib", pre));
     wait_exists(&lib_builtin_path);
@@ -50,15 +58,15 @@ fn main() {
     wait_exists(&lib_builtin_macros_path);
     assert!(lib_builtin_macros_path.exists());
     let lib_builtin_macros_path = lib_builtin_macros_path.to_str().unwrap();
-    let lib_state_machines_macros_path = verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
+    let lib_state_machines_macros_path =
+        verus_target_path.join(format!("{}state_machines_macros.{}", pre, dl));
     wait_exists(&lib_state_machines_macros_path);
     assert!(lib_state_machines_macros_path.exists());
     let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
 
     let vstd_vir_verus_target_path = verus_target_path.join(VSTD_VIR);
 
-    let target_path_str = target_path
-        .to_str().unwrap().to_string() + "/";
+    let target_path_str = target_path.to_str().unwrap().to_string() + "/";
 
     let child_args: Vec<String> = vec![
         "--internal-build-vstd-driver".to_string(),
@@ -90,7 +98,8 @@ fn main() {
         panic!("vstd build failed");
     }
 
-    std::fs::copy(target_path.join(VSTD_VIR), vstd_vir_verus_target_path).expect("could not copy vstd.vir");
+    std::fs::copy(target_path.join(VSTD_VIR), vstd_vir_verus_target_path)
+        .expect("could not copy vstd.vir");
 
     println!("cargo:rerun-if-changed={PERVASIVE_PATH}");
 }
