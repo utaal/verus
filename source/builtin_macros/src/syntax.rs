@@ -1648,7 +1648,6 @@ impl VisitMut for Visitor {
                     let parsed = attr.parse_meta().expect("failed to parse attribute");
                     match parsed {
                         syn_verus::Meta::List(meta_list) if meta_list.nested.len() == 1 => {
-                            // let mut ids = get_ident_from_path(&meta_list.path);
                             let span = attr.span();
                             let (second_segment, nested) = match &meta_list.nested[0] {
                                 syn_verus::NestedMeta::Meta(syn_verus::Meta::List(meta_list)) => {
