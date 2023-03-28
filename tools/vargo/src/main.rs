@@ -56,9 +56,10 @@ fn main() {
         target_verus_dir
     };
 
-    let cmd_position = args.iter().position(|x| x == "build" || x == "test" || x == "clean").expect("no build, test, or clean command");
+    let cmd_position = args.iter().position(|x| x == "build" || x == "test" || x == "clean" || x == "fmt").expect("no build, test, or clean command");
     let cmd = args[cmd_position].clone();
-    if cmd == "test" {
+
+    if cmd == "test" || cmd == "fmt" {
         match args.iter().position(|x| x == "--") {
             Some(pos) => {
                 args.insert(pos + 1, "--color=always".to_string());
@@ -68,6 +69,19 @@ fn main() {
                 args.push("--color=always".to_string());
             }
         }
+    }
+
+    if cmd == "fmt" {
+        let pos = args.iter().position(|x| x == "--").unwrap();
+
+        args.insert(pos + 1, "--config".to_string());
+        args.insert(pos + 2, "unstable_features=true,version=Two".to_string());
+        std::process::Command::new("cargo")
+            .env("RUSTC_BOOTSTRAP", "1")
+            .args(&args)
+            .status()
+            .expect("could not execute cargo");
+        return;
     }
 
     let _package = args.iter().position(|x| x == "--package" || x == "-p").map(|pos| args[pos + 1].clone());
@@ -161,7 +175,9 @@ fn main() {
                         let from_f = std::path::PathBuf::from(executable.as_ref().unwrap());
                         let to_f = {
                             let name = from_f.file_name().unwrap();
-                            let matches = bin_re.captures(name.to_str().unwrap()).unwrap();
+                            let Some(matches) = bin_re.captures(name.to_str().unwrap()) else {
+                                continue;
+                            };
                             let name = matches.get(1).unwrap().as_str();
                             let ext = matches.get(3).map(|x| x.as_str()).unwrap_or("");
                             let name = format!("{}{}", name, ext);
