@@ -14,9 +14,13 @@ const PERVASIVE_PATH: &str = "../pervasive";
 const VSTD_VIR: &str = "vstd.vir";
 
 fn wait_exists(path: &std::path::Path) {
-    while !path.exists() {
+    for _ in 0..200 {
+        if path.exists() {
+            return;
+        }
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
+    panic!("path {} does not exist after 20 seconds", path.display());
 }
 
 fn main() {

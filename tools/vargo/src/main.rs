@@ -56,8 +56,28 @@ fn main() {
         target_verus_dir
     };
 
-    let cmd_position = args.iter().position(|x| x == "build" || x == "test" || x == "clean" || x == "fmt").expect("no build, test, or clean command");
+    let cmd_position = args.iter().position(|x| x == "build" || x == "test" || x == "run" || x == "clean" || x == "fmt").expect("no build, test, run, fmt or clean command");
     let cmd = args[cmd_position].clone();
+
+    let package = args.iter().position(|x| x == "--package" || x == "-p").map(|pos| args[pos + 1].clone());
+
+    if cmd == "run" {
+        let release = args.iter().find(|x| x.as_str() == "--release").is_some();
+        match package.as_ref().map(|x| x.as_str()) {
+            Some("rust_verify") =>  {
+                eprintln!("rebuilding first{}", if release { " (release)" } else { "" });
+                let current_exe = std::env::current_exe().unwrap();
+                let mut vargo = std::process::Command::new(current_exe);
+                let mut vargo = vargo.arg("build");
+                if release {
+                    vargo = vargo.arg("--release")
+                }
+                vargo.spawn().expect("could not execute vargo").wait().expect("could not execute vargo");
+            }
+            Some("air") => (),
+            _ => panic!("unexpected package for `vargo run`"),
+        }
+    }
 
     if cmd == "test" || cmd == "fmt" {
         match args.iter().position(|x| x == "--") {
@@ -76,17 +96,9 @@ fn main() {
 
         args.insert(pos + 1, "--config".to_string());
         args.insert(pos + 2, "unstable_features=true,version=Two".to_string());
-        std::process::Command::new("cargo")
-            .env("RUSTC_BOOTSTRAP", "1")
-            .args(&args)
-            .status()
-            .expect("could not execute cargo");
-        return;
     }
 
-    let _package = args.iter().position(|x| x == "--package" || x == "-p").map(|pos| args[pos + 1].clone());
-
-    if cmd == "clean" {
+    if cmd == "clean" || cmd == "fmt" || cmd == "run" {
         std::process::Command::new("cargo")
             .env("RUSTC_BOOTSTRAP", "1")
             .args(&args)
@@ -115,11 +127,11 @@ fn main() {
     #[cfg(target_os = "windows")]
     let (pre, dl) = ("", "dll");
 
-    let rlib_re = regex::Regex::new((pre.to_string() + r"([a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)\.rlib").as_str()).unwrap();
+    let rlib_re = regex::Regex::new((pre.to_string() + r"([a-zA-Z0-9_]+)(-([a-zA-Z0-9_]+))?\.rlib").as_str()).unwrap();
 
-    let proc_macro_re = regex::Regex::new((pre.to_string() + r"([a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)\." + dl).as_str()).unwrap();
+    let proc_macro_re = regex::Regex::new((pre.to_string() + r"([a-zA-Z0-9_]+)(-([a-zA-Z0-9_]+))?\." + dl).as_str()).unwrap();
 
-    let bin_re = regex::Regex::new(r"([a-zA-Z0-9_]+)-([a-zA-Z0-9_]+)(\.[a-zA-Z]+)?").unwrap();
+    let bin_re = regex::Regex::new(r"([a-zA-Z0-9_]+)(-([a-zA-Z0-9_]+))?(\.[a-zA-Z]+)?").unwrap();
 
     let mut finished = false;
 
@@ -179,7 +191,7 @@ fn main() {
                                 continue;
                             };
                             let name = matches.get(1).unwrap().as_str();
-                            let ext = matches.get(3).map(|x| x.as_str()).unwrap_or("");
+                            let ext = matches.get(4).map(|x| x.as_str()).unwrap_or("");
                             let name = format!("{}{}", name, ext);
                             target_verus_dir.join(name)
                         };
