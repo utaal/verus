@@ -15,87 +15,21 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-      - name: download rust
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: compile-rust.yml
-          workflow_conclusion: success
-          branch: verification
-          name: rust-bin-lib-etc
-          path: ./rust/install
-          repo: verus-lang/rust
-      - name: unpack rust
-        run: |
-          cd rust/install
-          tar -xf rust_install.tar.gz
-
       - name: check cargo fmt
         working-directory: ./source
         run: |
-          RUSTC=../rust/install/bin/rustc RUSTFMT=../rust/install/bin/rustfmt ../rust/install/bin/cargo-fmt -- --check
+          export PATH=/home/chanheec/.cargo/bin/:$PATH
+          . ../tools/activate
+          vargo fmt -- --check
 
   test:
     runs-on: self-hosted
+    strategy:
+      matrix:
+        features: ['', 'singular']
     steps:
       - name: checkout
         uses: actions/checkout@v2
-      - name: download rust
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: compile-rust.yml
-          workflow_conclusion: success
-          branch: verification
-          name: rust-bin-lib-etc
-          path: ./rust/install
-          repo: verus-lang/rust
-      - name: unpack rust
-        run: |
-          cd rust/install
-          tar -xf rust_install.tar.gz
-      - name: prepare nextest
-        run: |
-          export PATH=/home/chanheec/.cargo/bin/:$PATH 
-          mkdir -p ~/.cargo/bin
-          rustup toolchain link rust-verify rust/install
-          cd source; rustup override set rust-verify
-      - name: get z3
-        working-directory: ./source
-        run: |
-          ../.github/workflows/get-z3.sh
-          echo z3 version `./z3 --version`
-
-      - name: cargo test
-        working-directory: ./source
-        run: |
-          echo rustc version `../rust/install/bin/rustc --version`
-          RUSTC=../rust/install/bin/rustc ../rust/install/bin/cargo clean
-          RUSTC=../rust/install/bin/rustc ../rust/install/bin/cargo build
-          LD_LIBRARY_PATH="$(pwd)/../rust/install/lib/rustlib/x86_64-unknown-linux-gnu/lib" VERUS_Z3_PATH="$(pwd)/z3" RUSTC=../rust/install/bin/rustc RUSTDOC=../rust/install/bin/rustdoc ./tools/run-tests.sh
-
-  test-with-singular:
-    runs-on: self-hosted
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: download rust
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: compile-rust.yml
-          workflow_conclusion: success
-          branch: verification
-          name: rust-bin-lib-etc
-          path: ./rust/install
-          repo: verus-lang/rust
-      - name: unpack rust
-        run: |
-          cd rust/install
-          tar -xf rust_install.tar.gz
-      - name: prepare nextest
-        run: |
-          export PATH=$PATH:/home/chanheec/.cargo/bin/ 
-          mkdir -p ~/.cargo/bin
-          rustup toolchain link rust-verify rust/install
-          cd source; rustup override set rust-verify
       - name: get z3
         working-directory: ./source
         run: |
@@ -104,6 +38,13 @@ jobs:
       - name: cargo test
         working-directory: ./source
         run: |
-          echo rustc version `../rust/install/bin/rustc --version`
-          RUSTC=../rust/install/bin/rustc ../rust/install/bin/cargo build --features singular       # build with singular feature 
-          VERUS_SINGULAR_PATH="/usr/bin/Singular" LD_LIBRARY_PATH="$(pwd)/../rust/install/lib/rustlib/x86_64-unknown-linux-gnu/lib" VERUS_Z3_PATH="$(pwd)/z3" RUSTC=../rust/install/bin/rustc RUSTDOC=../rust/install/bin/rustdoc ./tools/run-tests.sh --features singular
+          export PATH=/home/chanheec/.cargo/bin/:$PATH
+          . ../tools/activate
+          vargo clean
+          if [ "${{ matrix.features }}" == "singular" ]; then
+            vargo build --features singular
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test --features singular
+          else
+            vargo build
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test
+          fi
