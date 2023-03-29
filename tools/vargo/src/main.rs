@@ -107,6 +107,12 @@ fn main() {
         return;
     }
 
+    if cmd == "test" {
+        if package.is_none() {
+            panic!("`vargo test` must be run with a specific package for now");
+        }
+    }
+
     args.insert(cmd_position + 1, "--message-format=json-diagnostic-rendered-ansi".to_string());
     let mut cargo = std::process::Command::new("cargo")
         .env("RUSTC_BOOTSTRAP", "1")

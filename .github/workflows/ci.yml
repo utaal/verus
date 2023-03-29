@@ -15,18 +15,20 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+      - name: setup rust
+        run: |
+          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
       - name: check cargo fmt
         working-directory: ./source
         run: |
-          export PATH=/home/chanheec/.cargo/bin/:$PATH
           . ../tools/activate
           vargo fmt -- --check
 
   test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        features: ['', 'singular']
+        features: [''] # ['', 'singular']
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -35,16 +37,20 @@ jobs:
         run: |
           ../.github/workflows/get-z3.sh
           echo z3 version `./z3 --version`
+      - name: setup rust
+        run: |
+          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
       - name: cargo test
         working-directory: ./source
         run: |
-          export PATH=/home/chanheec/.cargo/bin/:$PATH
           . ../tools/activate
           vargo clean
           if [ "${{ matrix.features }}" == "singular" ]; then
             vargo build --features singular
-            VERUS_Z3_PATH="$(pwd)/z3" vargo test --features singular
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test -p air --features singular
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_teat --features singular
           else
             vargo build
-            VERUS_Z3_PATH="$(pwd)/z3" vargo test
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test -p air
+            VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_test
           fi
