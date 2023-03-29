@@ -863,9 +863,9 @@ test_verify_one_file! {
                 self.t == 5
             }
 
-            #[inductive(tr)]
+            #[inductive(tr)] // FAILS
             pub fn lemma_tr1(pre: Self, post: Self, x: int) {
-            } // FAILS
+            }
         }}
     } => Err(e) => assert_one_fails(e)
 }
@@ -888,9 +888,9 @@ test_verify_one_file! {
                 self.t == 5
             }
 
-            #[inductive(tr)]
+            #[inductive(tr)] // FAILS
             pub fn lemma_tr1(post: Self, x: int) {
-            } // FAILS
+            }
         }}
     } => Err(e) => assert_one_fails(e)
 }
@@ -2621,7 +2621,7 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "element but the given field has sharding strategy 'multiset'")
+    } => Err(e) => assert_any_vir_error_msg(e, "element but the given field has sharding strategy 'multiset'")
 }
 
 test_verify_one_file! {
@@ -2855,7 +2855,7 @@ test_verify_one_file! {
                 pub t: X::Instance,
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "recursive type")
+    } => Err(e) => assert_rust_error_code(e, "E0072")
 }
 
 test_verify_one_file! {
@@ -4497,7 +4497,7 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "pattern-binding cannot be used in a 'guard' statement")
+    } => Err(e) => assert_any_vir_error_msg(e, "pattern-binding cannot be used in a 'guard' statement")
 }
 
 test_verify_one_file! {
