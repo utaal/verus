@@ -1,6 +1,6 @@
 #![feature(rustc_private)]
 
-extern crate rustc_driver; // TODO can we remove this?
+extern crate rustc_driver; // TODO(main_new) can we remove this?
 
 #[cfg(target_family = "windows")]
 fn os_setup() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,6 +21,8 @@ fn os_setup() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn main() {
+    let test_quiet = std::env::var("VERUS_TEST_QUIET").is_ok();
+
     let mut internal_args = std::env::args();
     let internal_program = internal_args.next().unwrap();
     if let Some(first_arg) = internal_args.next() {
@@ -71,13 +73,14 @@ pub fn main() {
         }
     }
 
-    // TODO do not print in tests if cfg!(debug_assertions) {
-    // TODO do not print in tests     eprintln!(
-    // TODO do not print in tests         "warning: verus was compiled in debug mode, which will result in worse performance"
-    // TODO do not print in tests     );
-    // TODO do not print in tests     eprintln!();
-    // TODO do not print in tests     eprintln!("to compile in release mode use ./tools/cargo.sh build --release");
-    // TODO do not print in tests }
+    if cfg!(debug_assertions) {
+        if !test_quiet {
+            eprintln!(
+                "warning: verus was compiled in debug mode, which will result in worse performance"
+            );
+            // TODO(main_new) eprintln!("to compile in release mode use ./tools/cargo.sh build --release");
+        }
+    }
 
     let total_time_0 = std::time::Instant::now();
 

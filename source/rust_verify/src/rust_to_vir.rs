@@ -246,7 +246,7 @@ fn check_item<'tcx>(
                             &Some(module_path()),
                             true,
                             impl_item.owner_id.to_def_id(),
-                        ); // TODO correct?
+                        ); // TODO(main_new) correct?
                         match &impl_item.kind {
                             ImplItemKind::Fn(sig, body_id) => {
                                 let fn_attrs = ctxt.tcx.hir().attrs(impl_item.hir_id());
@@ -303,7 +303,7 @@ fn check_item<'tcx>(
                                             &ctxt,
                                             &Some(module_path()),
                                             false,
-                                            impl_item.owner_id.to_def_id(), // TODO correct?
+                                            impl_item.owner_id.to_def_id(), // TODO(main_new) correct?
                                         );
                                         let ident = impl_item_ref.ident.to_string();
                                         let ident = Arc::new(ident);
@@ -514,11 +514,6 @@ struct VisitMod<'tcx> {
 
 impl<'tcx> rustc_hir::intravisit::Visitor<'tcx> for VisitMod<'tcx> {
     type Map = rustc_middle::hir::map::Map<'tcx>;
-
-    // TODO fn nested_visit_map(&mut self) -> rustc_hir::intravisit::NestedVisitorMap<Self::Map> {
-    // TODO     // TODO rustc_hir::intravisit::NestedVisitorMap::All(self.tcx.hir())
-    // TODO     todo!()
-    // TODO }
 
     fn visit_item(&mut self, item: &'tcx Item<'tcx>) {
         self.ids.push(item.item_id());

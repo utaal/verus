@@ -292,7 +292,7 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO this should be failing; the issue may be due to the changes in the lifetime checker
+    // TODO(main_new) this should be failing; the issue may be due to the changes in the lifetime checker
     #[ignore] #[test] return_wrong_lifetime1 verus_code! {
         proof fn f<'a, 'b>(tracked x: &'a u32, tracked y: &'a u32, tracked z: &'b u32) -> &'b u32 {
             y
@@ -301,7 +301,7 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO this should be failing; the issue may be due to the changes in the lifetime checker
+    // TODO(main_new) this should be failing; the issue may be due to the changes in the lifetime checker
     #[ignore] #[test] return_wrong_lifetime2 verus_code! {
         proof fn f<'a, 'b>(tracked x: &'a u32, tracked y: &'a u32, tracked z: &'b u32) -> &'b u32 {
             z

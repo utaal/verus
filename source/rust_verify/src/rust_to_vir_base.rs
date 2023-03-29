@@ -259,7 +259,8 @@ pub(crate) fn is_visibility_private<'tcx>(
     let vis = ctxt.tcx.visibility(def_id);
     match vis {
         Visibility::Public => false,
-        // TODO reject pub(crate)?
+        // TODO(main_new) reject pub(crate)?
+        // TODO(main_new) this is almost certainly not quite right; some related tests are failing
         Visibility::Restricted(_) => inherited_is_private,
     }
 }
@@ -557,7 +558,7 @@ pub(crate) fn implements_structural<'tcx>(
         .expect("structural trait is not defined");
 
     use crate::rustc_middle::ty::TypeVisitable;
-    let infcx = tcx.infer_ctxt().build(); /* TODO correct? */
+    let infcx = tcx.infer_ctxt().build(); // TODO(main_new) correct?
     let ty = tcx.erase_regions(ty);
     if ty.has_escaping_bound_vars() {
         return false;

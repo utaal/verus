@@ -96,7 +96,6 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO error messages are handled differently
     #[ignore] #[test] test_withdraw_bind_guard IMPORTS.to_string() + verus_code_str! {
         tokenized_state_machine!{ X {
             fields {
@@ -110,7 +109,7 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "a guard value must be a deterministic function")
+    } => Err(e) => assert_any_vir_error_msg(e, "a guard value must be a deterministic function")
 }
 
 test_verify_one_file! {
@@ -148,7 +147,6 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO error messages are handled differently
     #[ignore] #[test] test_withdraw_bind_req IMPORTS.to_string() + verus_code_str! {
         tokenized_state_machine!{ X {
             fields {
@@ -162,7 +160,7 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "'require' statements should not be in the scope of a `withdraw` let-binding")
+    } => Err(e) => assert_any_vir_error_msg(e, "'require' statements should not be in the scope of a `withdraw` let-binding")
 }
 
 test_verify_one_file! {
@@ -186,7 +184,6 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO error messages are handled differently
     #[ignore] #[test] test_withdraw_bind_req2 IMPORTS.to_string() + verus_code_str! {
         tokenized_state_machine!{ X {
             fields {
@@ -203,7 +200,7 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "'require' statements should not be preceeded by an assert which is in the scope of")
+    } => Err(e) => assert_any_vir_error_msg(e, "'require' statements should not be preceeded by an assert which is in the scope of")
 }
 
 test_verify_one_file! {
@@ -224,7 +221,6 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO error messages are handled differently
     #[ignore] #[test] test_withdraw_binding_remove IMPORTS.to_string() + verus_code_str! {
         tokenized_state_machine!{ X {
             fields {
@@ -238,11 +234,10 @@ test_verify_one_file! {
                 }
             }
         }}
-    } => Err(e) => assert_vir_error_msg(e, "'remove' statements should not be in the scope of a `withdraw` let-binding")
+    } => Err(e) => assert_any_vir_error_msg(e, "'remove' statements should not be in the scope of a `withdraw` let-binding")
 }
 
 test_verify_one_file! {
-    // TODO error messages are handled differently
     #[ignore] #[test] test_birds_eye_special2 IMPORTS.to_string() + verus_code_str! {
         tokenized_state_machine!{ X {
             fields {

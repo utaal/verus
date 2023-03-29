@@ -80,7 +80,7 @@ fn run_example_for_file(file_path: &str) {
     let deps_dir = deps_dir.parent().unwrap();
     let target_dir = deps_dir.parent().unwrap();
 
-    let output = run_verus(&[], &PathBuf::from(relative_path), true, target_dir, false);
+    let output = run_verus(&[], &PathBuf::from(relative_path), true, target_dir, false, false);
 
     use regex::Regex;
     let re = Regex::new(r"verification results:: verified: (\d+) errors: (\d+)").unwrap();

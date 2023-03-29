@@ -1504,7 +1504,7 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
             return verus_rustc_driver::Compilation::Stop;
         }
         let crate_name: String =
-            queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO correct?
+            queries.crate_name().expect("crate name").borrow().to_ident_string(); // TODO(main_new) correct?
 
         let _result = queries.global_ctxt().expect("global_ctxt").enter(|tcx| {
             let imported = match crate::import_export::import_crates(&self.verifier.args) {

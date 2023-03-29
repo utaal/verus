@@ -8,41 +8,6 @@ pub use rust_verify_test_macros::{code, code_str, verus_code, verus_code_str};
 
 use rustc_span::source_map::FileLoader;
 
-// TODO #[derive(Clone, Default)]
-// TODO struct TestFileLoader {
-// TODO     files: std::collections::HashMap<std::path::PathBuf, String>,
-// TODO     pervasive_path: String,
-// TODO }
-// TODO
-// TODO impl TestFileLoader {
-// TODO     fn remap_pervasive_path(&self, path: &std::path::Path) -> std::path::PathBuf {
-// TODO         if path.parent().and_then(|x| x.file_name()) == Some(std::ffi::OsStr::new("pervasive")) {
-// TODO             if let Some(file_name) = path.file_name() {
-// TODO                 return std::path::Path::new(&self.pervasive_path).join(file_name).into();
-// TODO             }
-// TODO         }
-// TODO         path.into()
-// TODO     }
-// TODO }
-// TODO
-// TODO impl FileLoader for TestFileLoader {
-// TODO     fn file_exists(&self, path: &std::path::Path) -> bool {
-// TODO         self.remap_pervasive_path(path).exists() || self.files.contains_key(path)
-// TODO     }
-// TODO
-// TODO     fn read_file(&self, path: &std::path::Path) -> Result<String, std::io::Error> {
-// TODO         let remapped = self.remap_pervasive_path(path);
-// TODO         if remapped.exists() {
-// TODO             std::fs::read_to_string(remapped)
-// TODO         } else {
-// TODO             match self.files.get(path) {
-// TODO                 Some(content) => Ok(content.clone()),
-// TODO                 None => Err(std::io::Error::new(std::io::ErrorKind::NotFound, "file not found")),
-// TODO             }
-// TODO         }
-// TODO     }
-// TODO }
-
 #[derive(Debug, Deserialize)]
 pub struct DiagnosticText {
     pub text: String,
@@ -135,7 +100,8 @@ pub fn verify_files_vstd(
         f.write_all(file_contents.as_bytes()).expect("failed to write test file contents");
     }
 
-    let run = run_verus(options, &test_input_dir.join(entry_file), import_vstd, target_dir, true);
+    let run =
+        run_verus(options, &test_input_dir.join(entry_file), import_vstd, target_dir, true, true);
     let rust_output = std::str::from_utf8(&run.stderr[..]).unwrap().trim();
 
     let mut errors = Vec::new();
@@ -156,7 +122,7 @@ pub fn verify_files_vstd(
                         || diag.message == "split precondition failure"
                         || diag.message == "split postcondition failure")
                 {
-                    // TODO define in defs
+                    // TODO(main_new) define in defs
                     expand_errors_notes.push(diag);
                     continue;
                 }
@@ -188,6 +154,7 @@ pub fn run_verus(
     import_vstd: bool,
     target_dir: &std::path::Path,
     json_errors: bool,
+    quiet: bool,
 ) -> std::process::Output {
     if std::env::var("VERUS_IN_VARGO").is_err() {
         panic!("not running in vargo, read the README for instructions");
@@ -235,11 +202,6 @@ pub fn run_verus(
     wait_exists(&lib_state_machines_macros_path);
     assert!(lib_state_machines_macros_path.exists());
     let lib_state_machines_macros_path = lib_state_machines_macros_path.to_str().unwrap();
-
-    // TODO let pervasive_path = match std::env::var("TEST_PERVASIVE_PATH") {
-    // TODO     Ok(path) if !macro_erasure => path,
-    // TODO     _ => "../pervasive".to_string(),
-    // TODO };
 
     let bin = verus_target_path.join("rust_verify");
     wait_exists(&bin);
@@ -303,8 +265,12 @@ pub fn run_verus(
         ]);
     }
 
-    let mut child = std::process::Command::new(bin)
-        .env("VERUS_Z3_PATH", "../z3")
+    let mut child = std::process::Command::new(bin);
+    let mut child = child.env("VERUS_Z3_PATH", "../z3");
+    if quiet {
+        child = child.env("VERUS_TEST_QUIET", "1");
+    }
+    let mut child = child
         .args(&verus_args[..])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

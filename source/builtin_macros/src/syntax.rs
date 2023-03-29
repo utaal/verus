@@ -1658,7 +1658,7 @@ impl VisitMut for Visitor {
                                     (&meta_path.segments[0], None)
                                 }
                                 _ => {
-                                    panic!("invalid verifier attribute (1)"); // TODO use compile_error! if possible
+                                    panic!("invalid verifier attribute (1)"); // TODO(main_new) use compile_error! if possible
                                 }
                             };
                             let mut path_segments = Punctuated::new();
@@ -1679,7 +1679,7 @@ impl VisitMut for Visitor {
                                 },
                             };
                         }
-                        _ => panic!("invalid verifier attribute (2)"), // TODO use compile_error! if possible
+                        _ => panic!("invalid verifier attribute (2)"), // TODO(main_new) use compile_error! if possible
                     }
                 }
                 _ => (),

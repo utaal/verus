@@ -31,22 +31,22 @@ macro_rules! test_both {
     };
 }
 
-// TODO test_both! {
-// TODO     basic_usage basic_usage_local code! {
-// TODO         use vstd::invariant::*;
-// TODO
-// TODO         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: AtomicInvariant<A, u8, B>) {
-// TODO             requires([
-// TODO                 i.inv(0)
-// TODO             ]);
-// TODO             open_atomic_invariant!(&i => inner => {
-// TODO                 #[verifier::proof] let x = 5;
-// TODO                 #[verifier::proof] let x = 6;
-// TODO                 inner = 0;
-// TODO             });
-// TODO         }
-// TODO     } => Ok(())
-// TODO }
+// TODO(main_new) test_both! {
+// TODO(main_new)     basic_usage basic_usage_local code! {
+// TODO(main_new)         use vstd::invariant::*;
+// TODO(main_new)
+// TODO(main_new)         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: AtomicInvariant<A, u8, B>) {
+// TODO(main_new)             requires([
+// TODO(main_new)                 i.inv(0)
+// TODO(main_new)             ]);
+// TODO(main_new)             open_atomic_invariant!(&i => inner => {
+// TODO(main_new)                 #[verifier::proof] let x = 5;
+// TODO(main_new)                 #[verifier::proof] let x = 6;
+// TODO(main_new)                 inner = 0;
+// TODO(main_new)             });
+// TODO(main_new)         }
+// TODO(main_new)     } => Ok(())
+// TODO(main_new) }
 
 test_both! {
     basic_usage2 basic_usage2_local code! {
@@ -399,7 +399,8 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    /* TODO */ #[ignore] #[test] never_terminate_in_invariant code! {
+    // TODO(main_new)
+    #[ignore] #[test] never_terminate_in_invariant code! {
         use vstd::invariant::*;
 
         pub fn X<A, B: InvariantPredicate<A, u8>>(#[verifier::proof] i: LocalInvariant<A, u8, B>) {

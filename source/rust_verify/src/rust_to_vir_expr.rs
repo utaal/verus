@@ -1212,7 +1212,7 @@ fn fn_call_to_vir<'tcx>(
         };
     }
 
-    // TODO is calling `subst` still correct with the new API?
+    // TODO(main_new) is calling `subst` still correct with the new API?
     let raw_inputs =
         EarlyBinder(bctx.ctxt.tcx.fn_sig(f)).subst(tcx, node_substs).skip_binder().inputs();
     assert!(raw_inputs.len() == args.len());

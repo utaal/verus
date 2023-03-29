@@ -99,7 +99,7 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO should this be valid?
+    // TODO(main_new) should this be valid?
     #[ignore] #[test] proof_call_ok
     COMMON_TODO_DELETE_THIS.to_string() + verus_code_str! {
         pub fn do_nothing<A, B: InvariantPredicate<A, u8>>(i: Tracked<AtomicInvariant<A, u8, B>>, j: u64) {

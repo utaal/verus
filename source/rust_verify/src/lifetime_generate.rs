@@ -558,7 +558,7 @@ fn erase_call<'tcx>(
                 .into_iter()
                 .chain(args_slice.iter())
                 .map(|a| erase_expr(ctxt, state, expect_spec, a))
-                .collect(); // TODO correct?
+                .collect(); // REVIEW(main_new) correct?
             erase_spec_exps_typ(ctxt, state, expr.span, |_| TypX::mk_unit(), exps, false)
         }
         ResolvedCall::CompilableOperator(op) => {
@@ -1362,7 +1362,7 @@ fn erase_mir_generics<'tcx>(
                     if !matches!(*fn_params, TypX::Tuple(_)) {
                         fn_params = Box::new(TypX::Tuple(vec![fn_params]));
                     }
-                    let fn_ret = erase_ty(ctxt, state, &pred.self_ty()); // TODO correct?
+                    let fn_ret = erase_ty(ctxt, state, &pred.self_ty()); // REVIEW(main_new) correct?
                     fn_projections.insert(x, (fn_params, fn_ret)).map(|_| panic!("{:?}", pred));
                 }
             }

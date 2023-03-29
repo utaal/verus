@@ -202,7 +202,7 @@ impl SpanContextX {
         air::ast::Span { raw_span, id, data, as_string }
     }
 
-    // TODO this does not need to return Option
+    // TODO(main_new) this does not need to return Option
     pub(crate) fn from_air_span(&self, air_span: &air::ast::Span) -> Option<Span> {
         if let Some(span) = from_raw_span(&air_span.raw_span) {
             Some(span)

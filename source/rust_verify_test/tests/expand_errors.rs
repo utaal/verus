@@ -20,7 +20,7 @@ test_verify_one_file_with_options! {
 }
 
 test_verify_one_file_with_options! {
-    // TODO this is now emitting three separate diagnostics; should it be one?
+    // TODO(main_new) this is now emitting three separate diagnostics; should it be one?
     #[ignore] #[test] test2_expand_error ["--expand-errors"] => verus_code! {
         #[derive(PartialEq, Eq)]
         pub enum Message {
@@ -137,7 +137,7 @@ test_verify_one_file_with_options! {
 }
 
 test_verify_one_file_with_options! {
-    // TODO this is now emitting three separate diagnostics; should it be one?
+    // TODO(main_new) this is now emitting three separate diagnostics; should it be one?
     #[ignore] #[test] test5_expand_forall ["--expand-errors"] => verus_code! {
         use vstd::seq::*;
         spec fn seq_bounded_by_length(s1: Seq<int>) -> bool {

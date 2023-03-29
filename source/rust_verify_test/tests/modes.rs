@@ -613,7 +613,7 @@ test_verify_one_file! {
 }
 
 test_verify_one_file! {
-    // TODO this should be passing; the issue may be due to the changes in the lifetime checker
+    // TODO(main_new) this should be passing; the issue may be due to the changes in the lifetime checker
     #[ignore] #[test] tracked_double_deref code! {
         use vstd::modes::*;
 

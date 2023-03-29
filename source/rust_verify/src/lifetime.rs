@@ -133,14 +133,13 @@ pub(crate) fn check<'tcx>(queries: &'tcx verus_rustc_interface::Queries<'tcx>) {
                 match owner.node() {
                     OwnerNode::Item(item) => match &item.kind {
                         rustc_hir::ItemKind::Fn(..) => {
-                            tcx.ensure().mir_borrowck(item.owner_id.def_id); // TODO correct?
+                            tcx.ensure().mir_borrowck(item.owner_id.def_id); // REVIEW(main_new) correct?
                         }
                         ItemKind::Impl(impll) => {
                             for item in impll.items {
                                 match item.kind {
                                     AssocItemKind::Fn { .. } => {
-                                        tcx.ensure().mir_borrowck(item.id.owner_id.def_id);
-                                        // TODO correct?
+                                        tcx.ensure().mir_borrowck(item.id.owner_id.def_id); // REVIEW(main_new) correct?
                                     }
                                     _ => {}
                                 }
