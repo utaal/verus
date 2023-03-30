@@ -250,7 +250,7 @@ test_both! {
             throw_away(i);
           });
         }
-    } => Err(err) => assert_error_msg(err, "error[E0505]: cannot move out of `i` because it is borrowed")
+    } => Err(err) => assert_rust_error_msg(err, "error[E0505]: cannot move out of `i` because it is borrowed")
 }
 */
 
@@ -367,7 +367,7 @@ test_verify_one_file! {
             open_atomic_invariant!(&i => inner => {
             });
         }
-    } => Err(err) => assert_error_msg(err, "mismatched types")
+    } => Err(err) => assert_rust_error_msg(err, "mismatched types")
 }
 
 test_verify_one_file! {
@@ -378,7 +378,7 @@ test_verify_one_file! {
             open_local_invariant!(&i => inner => {
             });
         }
-    } => Err(err) => assert_error_msg(err, "mismatched types")
+    } => Err(err) => assert_rust_error_msg(err, "mismatched types")
 }
 
 test_verify_one_file! {

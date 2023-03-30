@@ -104,7 +104,7 @@ test_verify_one_file! {
                 assert(false);
             }
         }
-    } => Err(err) => assert_error_msg(err, ": bounds on broadcast_forall function type parameters")
+    } => Err(err) => assert_rust_error_msg(err, ": bounds on broadcast_forall function type parameters")
 }
 
 test_verify_one_file! {

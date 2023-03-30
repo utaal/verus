@@ -27,7 +27,7 @@ fn harness_invalid_rust() {
     };
     let err = verify_one_file("harness_invalid_rust", code, &[]).unwrap_err();
     assert_eq!(err.errors.len(), 1);
-    assert_error_msg(err, "cannot find function `invalid` in this scope");
+    assert_rust_error_msg(err, "cannot find function `invalid` in this scope");
 }
 
 #[test]

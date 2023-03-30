@@ -544,7 +544,7 @@ test_verify_one_file! {
             lemma(node);
             lemma(node);
         }
-    } => Err(err) => assert_error_msg(err, "error[E0382]: use of moved value: `node`")
+    } => Err(err) => assert_rust_error_msg(err, "error[E0382]: use of moved value: `node`")
 }
 
 test_verify_one_file! {
@@ -579,7 +579,7 @@ test_verify_one_file! {
                 self.lemma();
             }
         }
-    } => Err(err) => assert_error_msg(err, "cannot find value `other_node`")
+    } => Err(err) => assert_rust_error_msg(err, "cannot find value `other_node`")
 }
 
 test_verify_one_file! {
@@ -597,7 +597,7 @@ test_verify_one_file! {
                 self.lemma(t);
             }
         }
-    } => Err(err) => assert_error_msg(err, "test currently ignored")
+    } => Err(err) => assert_rust_error_msg(err, "test currently ignored")
 }
 
 test_verify_one_file! {
@@ -1089,7 +1089,7 @@ test_verify_one_file! {
             let ghost j = g@ + 1;
             let ghost k = verus_tmp; // error
         }
-    } => Err(err) => assert_error_msg(err, "cannot find value `verus_tmp`")
+    } => Err(err) => assert_rust_error_msg(err, "cannot find value `verus_tmp`")
 }
 
 test_verify_one_file! {
@@ -1098,7 +1098,7 @@ test_verify_one_file! {
             let Ghost(j) = g;
             let ghost k = verus_tmp_j; // error
         }
-    } => Err(err) => assert_error_msg(err, "cannot find value `verus_tmp_j`")
+    } => Err(err) => assert_rust_error_msg(err, "cannot find value `verus_tmp_j`")
 }
 
 test_verify_one_file! {
@@ -1180,7 +1180,7 @@ test_verify_one_file! {
         fn test1(Tracked(g): Ghost<&mut int>, Tracked(t): Tracked<&mut S>)
         {
         }
-    } => Err(err) => assert_error_msg(err, "no method named `get` found for struct `Ghost`")
+    } => Err(err) => assert_rust_error_msg(err, "no method named `get` found for struct `Ghost`")
 }
 
 test_verify_one_file! {

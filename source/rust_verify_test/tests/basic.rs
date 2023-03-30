@@ -274,7 +274,7 @@ test_verify_one_file! {
             let x: u64 = 10;
             x = 20;
         }
-    } => Err(err) => assert_error_msg(err, "cannot assign twice to immutable variable")
+    } => Err(err) => assert_rust_error_msg(err, "cannot assign twice to immutable variable")
 }
 
 test_verify_one_file! {

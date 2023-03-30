@@ -2850,7 +2850,7 @@ test_verify_one_file! {
                 pub t: X::Instance,
             }
         }}
-    } => Err(e) => assert_error_msg(e, "recursive type")
+    } => Err(e) => assert_rust_error_msg(e, "recursive type")
 }
 
 test_verify_one_file! {

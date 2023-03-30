@@ -297,7 +297,7 @@ test_verify_one_file! {
         proof fn f<'a, 'b>(tracked x: &'a u32, tracked y: &'a u32, tracked z: &'b u32) -> &'b u32 {
             y
         }
-    } => Err(err) => assert_error_msg(err, "error[E0623]: lifetime mismatch")
+    } => Err(err) => assert_rust_error_msg(err, "error[E0623]: lifetime mismatch")
 }
 
 test_verify_one_file! {
@@ -310,7 +310,7 @@ test_verify_one_file! {
         proof fn g<'a, 'b>(tracked x: &'a u32, tracked y: &'a u32, tracked z: &'b u32) -> &'b u32 {
             f(z, z, x)
         }
-    } => Err(err) => assert_error_msg(err, "error[E0623]: lifetime mismatch")
+    } => Err(err) => assert_rust_error_msg(err, "error[E0623]: lifetime mismatch")
 }
 
 test_verify_one_file! {
