@@ -411,9 +411,3 @@ pub fn assert_error_msg(err: TestErr, expected_msg: &str) {
     assert!(err.errors[0].code.as_ref().map(|x| error_re.is_match(&x.code)) == Some(true)); // thus a Rust error
     assert!(err.errors[0].message.contains(expected_msg));
 }
-
-#[allow(dead_code)]
-pub fn assert_rust_error_code(err: TestErr, expected_code: &str) {
-    assert_eq!(err.errors.len(), 1);
-    assert!(err.errors[0].code.as_ref().map(|x| x.code.as_str()) == Some(expected_code));
-}

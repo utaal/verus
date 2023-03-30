@@ -128,7 +128,7 @@ test_verify_one_file! {
             assert(f(7, 8));
             assert(i <= j);
         }
-    } => Err(e) => assert_rust_error_code(e, "E0277")
+    } => Err(e) => assert_error_msg(e, "expected a `std::ops::Fn<(_,)>` closure, found `builtin::FnSpec<(builtin::int, builtin::int), bool>`")
 }
 
 // choose_tuple

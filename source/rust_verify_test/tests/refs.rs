@@ -86,7 +86,7 @@ test_verify_one_file! {
             add1(&mut a);
             assert(a == 3);
         }
-    } => Err(err) => assert_rust_error_code(err, "E0308")
+    } => Err(err) => assert_error_msg(err, "mismatched types")
 }
 
 test_verify_one_file! {
