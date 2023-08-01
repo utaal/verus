@@ -2,7 +2,7 @@ use crate::attributes::{
     get_custom_err_annotations, get_ghost_block_opt, get_trigger, get_var_mode, get_verifier_attrs,
     parse_attrs, Attr, GhostBlockAttr,
 };
-use crate::context::{BodyCtxt, Context};
+use crate::context::{BodyCtxt, Context, TypeCtxt};
 use crate::erase::{CompilableOperator, ResolvedCall};
 use crate::rust_intrinsics_to_vir::int_intrinsic_constant_to_vir;
 use crate::rust_to_vir_base::{
@@ -98,7 +98,7 @@ pub(crate) fn closure_param_typs<'tcx>(
             for t in sig.inputs().skip_binder().iter() {
                 args.push(mid_ty_to_vir(
                     bctx.ctxt.tcx,
-                    &bctx.ctxt.verus_items,
+                    &bctx.ctxt.type_ctxt,
                     bctx.fun_id,
                     expr.span,
                     t,
@@ -123,7 +123,7 @@ fn closure_ret_typ<'tcx>(bctx: &BodyCtxt<'tcx>, expr: &Expr<'tcx>) -> Result<Typ
             let t = sig.output().skip_binder();
             mid_ty_to_vir(
                 bctx.ctxt.tcx,
-                &bctx.ctxt.verus_items,
+                &bctx.ctxt.type_ctxt,
                 bctx.fun_id,
                 expr.span,
                 &t,
@@ -231,7 +231,7 @@ pub(crate) fn get_fn_path<'tcx>(
             {
                 unsupported_err!(expr.span, format!("Fn {:?}", id))
             } else {
-                let path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, id);
+                let path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, id);
                 Ok(Arc::new(FunX { path }))
             }
         }
@@ -323,7 +323,7 @@ pub(crate) fn expr_tuple_datatype_ctor_to_vir<'tcx>(
 
     let (adt_def_id, variant_def, _is_enum) = get_adt_res(tcx, *res, fun_span)?;
     let variant_name = str_ident(&variant_def.ident(tcx).as_str());
-    let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, adt_def_id);
+    let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, adt_def_id);
 
     let vir_fields = Arc::new(
         args_slice
@@ -380,7 +380,7 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
             let res = bctx.types.qpath_res(qpath, pat.hir_id);
             let (adt_def_id, variant_def, _is_enum) = get_adt_res(tcx, res, pat.span)?;
             let variant_name = str_ident(&variant_def.ident(tcx).as_str());
-            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, adt_def_id);
+            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, adt_def_id);
             PatternX::Constructor(vir_path, variant_name, Arc::new(vec![]))
         }
         PatKind::Tuple(pats, dot_dot_pos) => {
@@ -411,7 +411,7 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
             let res = bctx.types.qpath_res(qpath, pat.hir_id);
             let (adt_def_id, variant_def, _is_enum) = get_adt_res(tcx, res, pat.span)?;
             let variant_name = str_ident(&variant_def.ident(tcx).as_str());
-            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, adt_def_id);
+            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, adt_def_id);
 
             let (n_wildcards, pos_to_insert_wildcards) =
                 handle_dot_dot(pats.len(), variant_def.fields.len(), &dot_dot_pos);
@@ -440,7 +440,7 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
                     let typ = field_def.ty(bctx.ctxt.tcx, substs);
                     let vir_typ = mid_ty_to_vir(
                         bctx.ctxt.tcx,
-                        &bctx.ctxt.verus_items,
+                        &bctx.ctxt.type_ctxt,
                         bctx.fun_id,
                         pat.span,
                         &typ,
@@ -464,7 +464,7 @@ pub(crate) fn pattern_to_vir_inner<'tcx>(
             let res = bctx.types.qpath_res(qpath, pat.hir_id);
             let (adt_def_id, variant_def, _is_enum) = get_adt_res(tcx, res, pat.span)?;
             let variant_name = str_ident(&variant_def.ident(tcx).as_str());
-            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, adt_def_id);
+            let vir_path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, adt_def_id);
 
             let mut binders: Vec<Binder<vir::ast::Pattern>> = Vec::new();
             for fpat in pats.iter() {
@@ -568,7 +568,7 @@ fn malformed_inv_block_err<'tcx>(expr: &Expr<'tcx>) -> Result<vir::ast::Expr, Vi
 }
 
 pub(crate) fn invariant_block_open<'a>(
-    verus_items: &verus_items::VerusItems,
+    type_ctxt: &TypeCtxt,
     open_stmt: &'a Stmt,
 ) -> Option<(HirId, HirId, &'a rustc_hir::Pat<'a>, &'a rustc_hir::Expr<'a>, InvAtomicity)> {
     match open_stmt.kind {
@@ -625,7 +625,7 @@ pub(crate) fn invariant_block_open<'a>(
                 }),
             ..
         }) if dot_dot_pos.as_opt_usize().is_none() => {
-            let verus_item = verus_items.id_to_name.get(fun_id);
+            let verus_item = type_ctxt.verus_id_to_name(fun_id);
             let atomicity = match verus_item {
                 Some(VerusItem::OpenInvariantBlock(
                     OpenInvariantBlockItem::OpenAtomicInvariantBegin,
@@ -719,7 +719,7 @@ fn invariant_block_to_vir<'tcx>(
     let close_stmt = &body.stmts[body.stmts.len() - 1];
 
     let (guard_hir, inner_hir, inner_pat, inv_arg, atomicity) = {
-        if let Some(block_open) = invariant_block_open(&bctx.ctxt.verus_items, open_stmt) {
+        if let Some(block_open) = invariant_block_open(&bctx.ctxt.type_ctxt, open_stmt) {
             block_open
         } else {
             return malformed_inv_block_err(expr);
@@ -727,7 +727,7 @@ fn invariant_block_to_vir<'tcx>(
     };
 
     if let Some((hir_id1, hir_id2, fun_id)) = invariant_block_close(close_stmt) {
-        let verus_item = bctx.ctxt.verus_items.id_to_name.get(&fun_id);
+        let verus_item = bctx.ctxt.type_ctxt.verus_id_to_name(&fun_id);
         if verus_item
             != Some(&VerusItem::OpenInvariantBlock(OpenInvariantBlockItem::OpenInvariantEnd))
         {
@@ -805,7 +805,7 @@ pub(crate) fn is_expr_typ_mut_ref<'tcx>(
 
 pub(crate) fn call_self_path(
     tcx: TyCtxt,
-    verus_items: &verus_items::VerusItems,
+    verus_items: &TypeCtxt,
     types: &rustc_middle::ty::TypeckResults,
     qpath: &QPath,
 ) -> Option<vir::ast::Path> {
@@ -1027,7 +1027,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     let def = bctx.types.qpath_res(&qpath, expr.hir_id);
                     match def {
                         rustc_hir::def::Res::Def(_, def_id) => {
-                            bctx.ctxt.verus_items.id_to_name.get(&def_id)
+                            bctx.ctxt.type_ctxt.verus_id_to_name(&def_id)
                                 == Some(&VerusItem::UnaryOp(UnaryOpItem::SpecCastInteger))
                         }
                         _ => false,
@@ -1172,7 +1172,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                         for arg in args {
                             arg_typs.push(mid_ty_to_vir(
                                 tcx,
-                                &bctx.ctxt.verus_items,
+                                &bctx.ctxt.type_ctxt,
                                 bctx.fun_id,
                                 arg.span,
                                 &bctx.types.expr_ty_adjusted(arg),
@@ -1188,7 +1188,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                         // Also, allow &mut refs here since that can happen for FnMut.
                         let fun_typ = mid_ty_to_vir(
                             tcx,
-                            &bctx.ctxt.verus_items,
+                            &bctx.ctxt.type_ctxt,
                             bctx.fun_id,
                             fun.span,
                             &fun_ty,
@@ -1350,7 +1350,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     Ok(mk_ty_clip(&expr_typ()?, &e, true))
                 }
                 BinOpKind::Div | BinOpKind::Rem => {
-                    match mk_range(&bctx.ctxt.verus_items, &tc.node_type(expr.hir_id)) {
+                    match mk_range(&bctx.ctxt.type_ctxt, &tc.node_type(expr.hir_id)) {
                         IntRange::Int | IntRange::Nat | IntRange::U(_) | IntRange::USize => {
                             // Euclidean division
                             Ok(mk_ty_clip(&expr_typ()?, &e, true))
@@ -1394,7 +1394,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     }
                 }
                 Res::Def(DefKind::Const, id) => {
-                    let path = def_id_to_vir_path(tcx, &bctx.ctxt.verus_items, id);
+                    let path = def_id_to_vir_path(tcx, &bctx.ctxt.type_ctxt, id);
                     let fun = FunX { path };
                     mk_expr(ExprX::ConstVar(Arc::new(fun)))
                 }
@@ -1439,7 +1439,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
             let lhs_modifier = is_expr_typ_mut_ref(bctx.types.expr_ty_adjusted(lhs), modifier)?;
             let vir_lhs = expr_to_vir(bctx, lhs, lhs_modifier)?;
             let lhs_ty = tc.expr_ty_adjusted(lhs);
-            let lhs_ty = mid_ty_simplify(tcx, &bctx.ctxt.verus_items, &lhs_ty, true);
+            let lhs_ty = mid_ty_simplify(tcx, &bctx.ctxt.type_ctxt, &lhs_ty, true);
             let (datatype, variant_name, field_name) = if let Some(adt_def) = lhs_ty.ty_adt_def() {
                 unsupported_err_unless!(
                     adt_def.variants().len() == 1,
@@ -1447,7 +1447,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                     "field_of_adt_with_multiple_variants",
                     expr
                 );
-                let datatype_path = def_id_to_vir_path(tcx, &bctx.ctxt.verus_items, adt_def.did());
+                let datatype_path = def_id_to_vir_path(tcx, &bctx.ctxt.type_ctxt, adt_def.did());
                 let hir_def = bctx.ctxt.tcx.adt_def(adt_def.did());
                 let variant = hir_def.variants().iter().next().unwrap();
                 let variant_name = str_ident(&variant.ident(tcx).as_str());
@@ -1639,7 +1639,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
             let res = bctx.types.qpath_res(qpath, expr.hir_id);
             let (adt_def_id, variant_def, _is_enum) = get_adt_res(tcx, res, expr.span)?;
             let variant_name = str_ident(&variant_def.ident(tcx).as_str());
-            let path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.verus_items, adt_def_id);
+            let path = def_id_to_vir_path(bctx.ctxt.tcx, &bctx.ctxt.type_ctxt, adt_def_id);
 
             let vir_fields = Arc::new(
                 fields
@@ -1697,7 +1697,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                         }
                     }
 
-                    let verus_item = bctx.ctxt.verus_items.id_to_name.get(&fn_def_id);
+                    let verus_item = bctx.ctxt.type_ctxt.verus_id_to_name(&fn_def_id);
                     if let Some(VerusItem::BuiltinFunction(
                         re @ (BuiltinFunctionItem::FnWithSpecificationRequires
                         | BuiltinFunctionItem::FnWithSpecificationEnsures),
@@ -1732,7 +1732,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
                                 GenericArgKind::Type(ty) => {
                                     typ_args.push(mid_ty_to_vir(
                                         tcx,
-                                        &bctx.ctxt.verus_items,
+                                        &bctx.ctxt.type_ctxt,
                                         bctx.fun_id,
                                         expr.span,
                                         &ty,
@@ -1846,7 +1846,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
         ExprKind::Break(..) => unsupported_err!(expr.span, format!("complex break expressions")),
         ExprKind::AssignOp(op, lhs, rhs) => {
             if matches!(op.node, BinOpKind::Div | BinOpKind::Rem) {
-                let range = mk_range(&bctx.ctxt.verus_items, &tc.expr_ty_adjusted(lhs));
+                let range = mk_range(&bctx.ctxt.type_ctxt, &tc.expr_ty_adjusted(lhs));
                 if matches!(range, IntRange::I(_) | IntRange::ISize) {
                     // Non-Euclidean division, which will need more encoding
                     return unsupported_err!(expr.span, "div/mod on signed finite-width integers");
@@ -1969,7 +1969,7 @@ fn expr_assign_to_vir_innermost<'tcx>(
             ExprKind::Field(lhs, _) => {
                 let deref_ghost = mid_ty_to_vir_ghost(
                     bctx.ctxt.tcx,
-                    &bctx.ctxt.verus_items,
+                    &bctx.ctxt.type_ctxt,
                     bctx.fun_id,
                     lhs.span,
                     &bctx.types.expr_ty_adjusted(lhs),
@@ -2071,7 +2071,7 @@ fn unwrap_parameter_to_vir<'tcx>(
             .types
             .type_dependent_def_id(expr_get.hir_id)
             .expect("def id of the method definition");
-        let verus_item = bctx.ctxt.verus_items.id_to_name.get(&fn_def_id);
+        let verus_item = bctx.ctxt.type_ctxt.verus_id_to_name(&fn_def_id);
         let ident_x = crate::rust_to_vir_base::qpath_to_ident(bctx.ctxt.tcx, path_x);
         let ident_y = crate::rust_to_vir_base::qpath_to_ident(bctx.ctxt.tcx, path_y);
         let mode = match verus_item {

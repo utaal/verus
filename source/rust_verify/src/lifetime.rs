@@ -109,12 +109,12 @@ converting the synthetic line/column information back into spans for the origina
 and then sending the error messages and spans to the rustc diagnostics for the original source code.
 */
 
+use crate::context::TypeCtxt;
 use crate::erase::ErasureHints;
 use crate::lifetime_emit::*;
 use crate::lifetime_generate::*;
 use crate::spans::SpanContext;
 use crate::util::error;
-use crate::verus_items::VerusItems;
 use air::messages::{message_bare, Message, MessageLevel};
 use rustc_hir::{AssocItemKind, Crate, ItemKind, MaybeOwner, OwnerNode};
 use rustc_middle::ty::TyCtxt;
@@ -192,7 +192,7 @@ fn index<'a, V, Idx, Output>(v: &'a V, index: Idx) -> &'a Output { panic!() }
 
 fn emit_check_tracked_lifetimes<'tcx>(
     tcx: TyCtxt<'tcx>,
-    verus_items: std::sync::Arc<VerusItems>,
+    verus_items: std::sync::Arc<TypeCtxt>,
     krate: &'tcx Crate<'tcx>,
     emit_state: &mut EmitState,
     erasure_hints: &ErasureHints,
@@ -283,7 +283,7 @@ pub fn lifetime_rustc_driver(rustc_args: &[String], rust_code: String) {
 
 pub(crate) fn check_tracked_lifetimes<'tcx>(
     tcx: TyCtxt<'tcx>,
-    verus_items: std::sync::Arc<VerusItems>,
+    verus_items: std::sync::Arc<TypeCtxt>,
     spans: &SpanContext,
     erasure_hints: &ErasureHints,
     lifetime_log_file: Option<File>,

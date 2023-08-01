@@ -83,7 +83,7 @@ where
 
         let typ = mid_ty_to_vir(
             ctxt.tcx,
-            &ctxt.verus_items,
+            &ctxt.type_ctxt,
             item_id.owner_id.to_def_id(),
             span,
             &field_ty,
@@ -126,7 +126,7 @@ pub fn check_item_struct<'tcx>(
     let vattrs = get_verifier_attrs(attrs)?;
 
     let is_strslice_struct = matches!(
-        ctxt.verus_items.id_to_name.get(&id.owner_id.to_def_id()),
+        ctxt.type_ctxt.verus_id_to_name(&id.owner_id.to_def_id()),
         Some(&VerusItem::Pervasive(PervasiveItem::StrSlice, _))
     );
 
@@ -156,13 +156,13 @@ pub fn check_item_struct<'tcx>(
     let def_id = id.owner_id.to_def_id();
     let (typ_params, typ_bounds) = check_generics_bounds(
         ctxt.tcx,
-        &ctxt.verus_items,
+        &ctxt.type_ctxt,
         generics,
         vattrs.external_body,
         def_id,
         Some(&vattrs),
     )?;
-    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, def_id);
+    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, def_id);
     let name = path.segments.last().expect("unexpected struct path");
 
     let variant_name = Arc::new(name.clone());
@@ -239,13 +239,13 @@ pub fn check_item_enum<'tcx>(
     let def_id = id.owner_id.to_def_id();
     let (typ_params, typ_bounds) = check_generics_bounds(
         ctxt.tcx,
-        &ctxt.verus_items,
+        &ctxt.type_ctxt,
         generics,
         vattrs.external_body,
         def_id,
         Some(&vattrs),
     )?;
-    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, def_id);
+    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, def_id);
     let mut total_vis = visibility.clone();
     let mut variants: Vec<_> = vec![];
     for variant in enum_def.variants.iter() {
@@ -443,7 +443,7 @@ pub(crate) fn check_item_external<'tcx>(
     let def_id = id.owner_id.to_def_id();
     let (typ_params, typ_bounds) = check_generics_bounds(
         ctxt.tcx,
-        &ctxt.verus_items,
+        &ctxt.type_ctxt,
         generics,
         vattrs.external_body,
         def_id,
@@ -451,14 +451,14 @@ pub(crate) fn check_item_external<'tcx>(
     )?;
     let mode = Mode::Exec;
 
-    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, external_def_id);
+    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, external_def_id);
     let name = path.segments.last().expect("unexpected struct path");
 
     if path.krate == Some(Arc::new("builtin".to_string())) {
         return err_span(span, "cannot apply `external_type_specification` to Verus builtin types");
     }
 
-    let proxy_path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, proxy_adt_def.did());
+    let proxy_path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, proxy_adt_def.did());
     let proxy = ctxt.spanned_new(span, proxy_path);
     let proxy = Some((*proxy).clone());
     let owning_module = Some(module_path.clone());

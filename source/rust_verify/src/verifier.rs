@@ -1,9 +1,8 @@
 use crate::config::{Args, ShowTriggers};
-use crate::context::{ArchContextX, ContextX, ErasureInfo};
+use crate::context::{ArchContextX, ContextX, ErasureInfo, TypeCtxt};
 use crate::debugger::Debugger;
 use crate::spans::{SpanContext, SpanContextX};
 use crate::util::error;
-use crate::verus_items::VerusItems;
 use air::ast::{Command, CommandX, Commands};
 use air::context::{QueryContext, ValidityResult};
 use air::messages::{message, note, note_bare, Diagnostics, Message, MessageLabel, MessageLevel};
@@ -1641,7 +1640,7 @@ impl Verifier {
     fn construct_vir_crate<'tcx>(
         &mut self,
         tcx: TyCtxt<'tcx>,
-        verus_items: Arc<VerusItems>,
+        verus_items: Arc<TypeCtxt>,
         spans: &SpanContext,
         other_crate_names: Vec<String>,
         other_vir_crates: Vec<Krate>,
@@ -1722,7 +1721,7 @@ impl Verifier {
             spans: spans.clone(),
             vstd_crate_name: vstd_crate_name.clone(),
             arch: Arc::new(ArchContextX { word_bits: self.args.arch_word_bits }),
-            verus_items,
+            type_ctxt: verus_items,
         });
         let multi_crate = self.args.export.is_some() || import_len > 0;
         crate::rust_to_vir_base::MULTI_CRATE
@@ -1880,15 +1879,13 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
                 let mut impl_names = imported.impl_names;
                 impl_names.extend(local_impl_names);
                 self.impl_name_state = Some(impl_name_state);
-                let verus_items_impl = Arc::new(crate::verus_items::from_diagnostic_items(
+                let verus_items = Arc::new(crate::verus_items::from_diagnostic_items(
                     &tcx.all_diagnostic_items(()),
                 ));
-                let id_to_name = verus_items_impl.id_to_name.clone();
-                let verus_items =
-                    Arc::new(crate::context::TypeCtxt { verus_items_impl, id_to_name, impl_names });
+                let type_ctxt = Arc::new(crate::context::TypeCtxt { verus_items, impl_names });
                 if let Err(err) = self.verifier.construct_vir_crate(
                     tcx,
-                    verus_items.clone(),
+                    type_ctxt.clone(),
                     &spans,
                     imported.crate_names,
                     imported.vir_crates,
@@ -1927,7 +1924,7 @@ impl verus_rustc_driver::Callbacks for VerifierCallbacksEraseMacro {
                     };
                     crate::lifetime::check_tracked_lifetimes(
                         tcx,
-                        verus_items,
+                        type_ctxt,
                         &spans,
                         self.verifier.erasure_hints.as_ref().expect("erasure_hints"),
                         lifetime_log_file,

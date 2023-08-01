@@ -473,17 +473,14 @@ fn verus_items_map() -> Vec<(&'static str, VerusItem)> {
     ]
 }
 
-// TODO: rename to VerusItems
-pub(crate) struct VerusItemsImpl {
+pub(crate) struct VerusItems {
     pub(crate) id_to_name: HashMap<DefId, VerusItem>,
     pub(crate) name_to_id: HashMap<VerusItem, DefId>,
 }
-// TODO: rename VerusItems and verus_items to TypeCtxt and type_ctxt
-pub(crate) type VerusItems = crate::context::TypeCtxt;
 
 pub(crate) fn from_diagnostic_items(
     diagnostic_items: &rustc_hir::diagnostic_items::DiagnosticItems,
-) -> VerusItemsImpl {
+) -> VerusItems {
     let verus_item_map: HashMap<&str, VerusItem> =
         verus_items_map().iter().map(|(k, v)| (*k, v.clone())).collect();
     let diagnostic_name_to_id = &diagnostic_items.name_to_id;
@@ -500,7 +497,7 @@ pub(crate) fn from_diagnostic_items(
             }
         }
     }
-    VerusItemsImpl { id_to_name, name_to_id }
+    VerusItems { id_to_name, name_to_id }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]

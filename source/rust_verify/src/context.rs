@@ -1,4 +1,4 @@
-use crate::{erase::ResolvedCall, verus_items::VerusItems};
+use crate::erase::ResolvedCall;
 use air::ast::AstId;
 use rustc_hir::{Crate, HirId};
 use rustc_middle::ty::{TyCtxt, TypeckResults};
@@ -25,11 +25,14 @@ pub struct ArchContextX {
 }
 
 pub(crate) struct TypeCtxt {
-    // TODO: rename to verus_items
-    pub(crate) verus_items_impl: Arc<crate::verus_items::VerusItemsImpl>,
-    // TODO: replace this with a method that wraps verus_items_impl.id_to_name.get(...):
-    pub(crate) id_to_name: std::collections::HashMap<DefId, crate::verus_items::VerusItem>,
+    pub(crate) verus_items: Arc<crate::verus_items::VerusItems>,
     pub(crate) impl_names: crate::names::ImplNameCtxt,
+}
+
+impl TypeCtxt {
+    pub(crate) fn verus_id_to_name(&self, id: &DefId) -> Option<&crate::verus_items::VerusItem> {
+        self.verus_items.id_to_name.get(id)
+    }
 }
 
 pub type Context<'tcx> = Arc<ContextX<'tcx>>;
@@ -41,7 +44,7 @@ pub struct ContextX<'tcx> {
     pub(crate) spans: crate::spans::SpanContext,
     pub(crate) vstd_crate_name: Option<Ident>,
     pub(crate) arch: ArchContext,
-    pub(crate) verus_items: Arc<VerusItems>,
+    pub(crate) type_ctxt: Arc<TypeCtxt>,
 }
 
 #[derive(Clone)]
@@ -62,6 +65,6 @@ impl<'tcx> ContextX<'tcx> {
     }
 
     pub(crate) fn get_verus_item(&self, def_id: DefId) -> Option<&crate::verus_items::VerusItem> {
-        self.verus_items.id_to_name.get(&def_id)
+        self.type_ctxt.verus_id_to_name(&def_id)
     }
 }

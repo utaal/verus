@@ -46,7 +46,7 @@ fn check_item<'tcx>(
                 .as_ref()
                 .expect("owner of item")
                 .node();
-            def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, owned_by.def_id().to_def_id())
+            def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, owned_by.def_id().to_def_id())
         }
     };
 
@@ -109,7 +109,7 @@ fn check_item<'tcx>(
                 }
 
                 let def_id = id.owner_id.to_def_id();
-                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, def_id);
+                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, def_id);
                 vir.external_types.push(path);
 
                 return Ok(());
@@ -134,7 +134,7 @@ fn check_item<'tcx>(
         ItemKind::Enum(enum_def, generics) => {
             if vattrs.external {
                 let def_id = id.owner_id.to_def_id();
-                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, def_id);
+                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, def_id);
                 vir.external_types.push(path);
 
                 return Ok(());
@@ -159,7 +159,7 @@ fn check_item<'tcx>(
         }
         ItemKind::Impl(impll) => {
             let impl_def_id = item.owner_id.to_def_id();
-            let impl_path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, impl_def_id);
+            let impl_path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, impl_def_id);
 
             if vattrs.external {
                 return Ok(());
@@ -179,7 +179,7 @@ fn check_item<'tcx>(
                     );
                 }
 
-                let verus_item = ctxt.verus_items.id_to_name.get(&trait_def_id);
+                let verus_item = ctxt.type_ctxt.verus_id_to_name(&trait_def_id);
                 if matches!(
                     verus_item,
                     Some(VerusItem::BuiltinTrait(BuiltinTraitItem::FnWithSpecification))
@@ -273,14 +273,14 @@ fn check_item<'tcx>(
                 for ty in trait_ref.0.substs.types() {
                     types.push(mid_ty_to_vir(
                         ctxt.tcx,
-                        &ctxt.verus_items,
+                        &ctxt.type_ctxt,
                         impl_def_id,
                         impll.generics.span,
                         &ty,
                         false,
                     )?);
                 }
-                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, path.res.def_id());
+                let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, path.res.def_id());
                 let trait_impl =
                     vir::ast::TraitImplX { impl_path: impl_path.clone(), trait_path: path.clone() };
                 vir.trait_impls.push(ctxt.spanned_new(item.span, trait_impl));
@@ -357,7 +357,7 @@ fn check_item<'tcx>(
                             let ty = ctxt.tcx.type_of(impl_item.owner_id.to_def_id());
                             let typ = mid_ty_to_vir(
                                 ctxt.tcx,
-                                &ctxt.verus_items,
+                                &ctxt.type_ctxt,
                                 impl_item.owner_id.to_def_id(),
                                 impl_item.span,
                                 &ty,
@@ -368,7 +368,7 @@ fn check_item<'tcx>(
                                 let (typ_params, typ_bounds) =
                                     crate::rust_to_vir_base::check_generics_bounds_fun(
                                         ctxt.tcx,
-                                        &ctxt.verus_items,
+                                        &ctxt.type_ctxt,
                                         impll.generics,
                                         impl_def_id,
                                     )?;
@@ -408,7 +408,7 @@ fn check_item<'tcx>(
         }
         ItemKind::Const(_ty, body_id) => {
             let def_id = body_id.hir_id.owner.to_def_id();
-            let path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, def_id);
+            let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, def_id);
             if path
                 .segments
                 .iter()
@@ -424,7 +424,7 @@ fn check_item<'tcx>(
 
             let mid_ty = ctxt.tcx.type_of(def_id);
             let vir_ty =
-                mid_ty_to_vir(ctxt.tcx, &ctxt.verus_items, def_id, item.span, &mid_ty, false)?;
+                mid_ty_to_vir(ctxt.tcx, &ctxt.type_ctxt, def_id, item.span, &mid_ty, false)?;
 
             crate::rust_to_vir_func::check_item_const(
                 ctxt,
@@ -452,7 +452,7 @@ fn check_item<'tcx>(
                         let span = item.span;
                         match check_generic_bound(
                             ctxt.tcx,
-                            &ctxt.verus_items,
+                            &ctxt.type_ctxt,
                             trait_def_id,
                             span,
                             id,
@@ -467,13 +467,13 @@ fn check_item<'tcx>(
             }
             let (generics_params, generics_bnds) = check_generics_bounds(
                 ctxt.tcx,
-                &ctxt.verus_items,
+                &ctxt.type_ctxt,
                 trait_generics,
                 false,
                 trait_def_id,
                 None,
             )?;
-            let trait_path = def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, trait_def_id);
+            let trait_path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, trait_def_id);
             let mut assoc_typs: Vec<vir::ast::Ident> = Vec::new();
             let mut methods: Vec<vir::ast::Function> = Vec::new();
             let mut method_names: Vec<Fun> = Vec::new();
@@ -489,7 +489,7 @@ fn check_item<'tcx>(
                 } = trait_item;
                 let (generics_params, generics_bnds) = check_generics_bounds(
                     ctxt.tcx,
-                    &ctxt.verus_items,
+                    &ctxt.type_ctxt,
                     item_generics,
                     false,
                     owner_id.to_def_id(),
@@ -633,7 +633,7 @@ pub fn crate_to_vir<'tcx>(ctxt: &Context<'tcx>) -> Result<Krate, VirErr> {
                     } else {
                         // Shallowly visit just the top-level items (don't visit nested modules)
                         let path =
-                            def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, owner_id.to_def_id());
+                            def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, owner_id.to_def_id());
                         vir.module_ids.push(path.clone());
                         let path = Some(path);
                         item_to_module
@@ -641,8 +641,7 @@ pub fn crate_to_vir<'tcx>(ctxt: &Context<'tcx>) -> Result<Krate, VirErr> {
                     };
                 }
                 OwnerNode::Crate(mod_) => {
-                    let path =
-                        def_id_to_vir_path(ctxt.tcx, &ctxt.verus_items, owner_id.to_def_id());
+                    let path = def_id_to_vir_path(ctxt.tcx, &ctxt.type_ctxt, owner_id.to_def_id());
                     vir.module_ids.push(path.clone());
                     item_to_module
                         .extend(mod_.item_ids.iter().map(move |ii| (*ii, Some(path.clone()))))

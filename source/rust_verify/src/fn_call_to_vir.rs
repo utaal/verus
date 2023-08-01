@@ -128,7 +128,7 @@ pub(crate) fn fn_call_to_vir<'tcx>(
         "call of trait impl"
     );
 
-    let path = def_id_to_vir_path(tcx, &bctx.ctxt.verus_items, f);
+    let path = def_id_to_vir_path(tcx, &bctx.ctxt.type_ctxt, f);
     let name = Arc::new(FunX { path: path.clone() });
     let autospec_usage = if bctx.in_ghost { AutospecUsage::IfMarked } else { AutospecUsage::Final };
 
@@ -152,9 +152,8 @@ pub(crate) fn fn_call_to_vir<'tcx>(
             if let rustc_middle::ty::InstanceDef::Item(item) = inst.def {
                 if let rustc_middle::ty::WithOptConstParam { did, const_param_did: None } = item {
                     let typs = mk_typ_args(bctx, &inst.substs, expr.span)?;
-                    let f = Arc::new(FunX {
-                        path: def_id_to_vir_path(tcx, &bctx.ctxt.verus_items, did),
-                    });
+                    let f =
+                        Arc::new(FunX { path: def_id_to_vir_path(tcx, &bctx.ctxt.type_ctxt, did) });
                     let impl_paths = get_impl_paths(bctx, did, &inst.substs);
                     resolved = Some((f, typs, impl_paths));
                 }
@@ -1043,7 +1042,7 @@ fn verus_item_to_vir<'tcx, 'a>(
                 let t = match node_substs[0].unpack() {
                     GenericArgKind::Type(ty) => mid_ty_to_vir(
                         tcx,
-                        &bctx.ctxt.verus_items,
+                        &bctx.ctxt.type_ctxt,
                         bctx.fun_id,
                         expr.span,
                         &ty,
@@ -1160,7 +1159,7 @@ fn get_impl_paths<'tcx>(
     if let rustc_middle::ty::FnDef(fid, _fsubsts) = bctx.ctxt.tcx.type_of(f).kind() {
         crate::rust_to_vir_base::get_impl_paths(
             bctx.ctxt.tcx,
-            &bctx.ctxt.verus_items,
+            &bctx.ctxt.type_ctxt,
             bctx.fun_id,
             *fid,
             node_substs,
@@ -1366,7 +1365,7 @@ fn skip_closure_coercion<'tcx>(bctx: &BodyCtxt<'tcx>, expr: &'tcx Expr<'tcx>) ->
                 let def = bctx.types.qpath_res(&qpath, fun.hir_id);
                 match def {
                     rustc_hir::def::Res::Def(_, def_id) => {
-                        let verus_item = bctx.ctxt.verus_items.id_to_name.get(&def_id);
+                        let verus_item = bctx.ctxt.type_ctxt.verus_id_to_name(&def_id);
                         if verus_item == Some(&VerusItem::Expr(ExprItem::ClosureToFnSpec)) {
                             return &args_slice[0];
                         }
@@ -1454,7 +1453,7 @@ fn mk_typ_args<'tcx>(
             GenericArgKind::Type(ty) => {
                 typ_args.push(mid_ty_to_vir(
                     tcx,
-                    &bctx.ctxt.verus_items,
+                    &bctx.ctxt.type_ctxt,
                     bctx.fun_id,
                     span,
                     &ty,
@@ -1567,7 +1566,7 @@ fn check_variant_field<'tcx>(
         return err_span(span, format!("no variant `{variant_name:}` for this datatype"));
     };
 
-    let vir_adt_ty = mid_ty_to_vir(tcx, &bctx.ctxt.verus_items, bctx.fun_id, span, &ty, false)?;
+    let vir_adt_ty = mid_ty_to_vir(tcx, &bctx.ctxt.type_ctxt, bctx.fun_id, span, &ty, false)?;
     let adt_path = match &*vir_adt_ty {
         TypX::Datatype(path, _, _) => path.clone(),
         _ => {
@@ -1585,10 +1584,10 @@ fn check_variant_field<'tcx>(
 
             let field_ty = field.ty(tcx, substs);
             let vir_field_ty =
-                mid_ty_to_vir(tcx, &bctx.ctxt.verus_items, bctx.fun_id, span, &field_ty, false)?;
+                mid_ty_to_vir(tcx, &bctx.ctxt.type_ctxt, bctx.fun_id, span, &field_ty, false)?;
             let vir_expected_field_ty = mid_ty_to_vir(
                 tcx,
-                &bctx.ctxt.verus_items,
+                &bctx.ctxt.type_ctxt,
                 bctx.fun_id,
                 span,
                 &expected_field_typ,
