@@ -216,7 +216,7 @@ fn run() -> Result<(), String> {
         if let Some(cap) = captures.next() {
             let channel = &cap[2];
             let toolchain = cap[1].to_string();
-            if rust_toolchain_toml_channel != channel {
+            if !channel.starts_with(rust_toolchain_toml_channel) {
                 return Err(format!("rustup is using a toolchain with channel {channel}, we expect {rust_toolchain_toml_channel}\ndo you have a rustup override set?"));
             }
             Some(toolchain)
