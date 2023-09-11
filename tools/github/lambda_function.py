@@ -19,7 +19,15 @@ def lambda_handler(event, context):
                 'body': 'Repository url is missing.'
             }
 
-        runner_dir = "/actions-runner"
+        runner_dir = "/tmp/actions-runner"
+
+        try:
+            subprocess.run(["cp", "-r", "/actions-runner", runner_dir])
+        except Exception as e:
+            return {
+                'statusCode': 400,
+                'body': 'Copy of actions-runner failed.'
+            }
 
         os.chdir(runner_dir)
 
@@ -34,6 +42,7 @@ def lambda_handler(event, context):
                 "--ephemeral",
                 "--unattended",
                 "--labels", "ephemeral-lambda",
+                "--work", "/tmp/_work",
                 "--disableupdate"
             ],
             capture_output=True,

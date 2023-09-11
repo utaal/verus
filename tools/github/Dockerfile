@@ -56,6 +56,10 @@ RUN cd /tmp && \
     rm -rf /tmp/*
 
 RUN \
+    cd /tmp && \
+    mkdir -p /tmp/cargo && \
+    mkdir -p /tmp/rustup && \
+    CARGO_HOME=/tmp/cargo RUSTUP_HOME=/tmp/rustup \
     curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
 
 RUN \
