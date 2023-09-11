@@ -1,14 +1,12 @@
 FROM verus-github-ephemeral-runner-base:latest 
 
 RUN \
-    mv /cargo /tmp/cargo && \
-    mv /rustup /tmp/rustup && \
-    export CARGO_HOME=/tmp/cargo && \
-    export RUSTUP_HOME=/tmp/rustup && \
-    . /tmp/cargo/env && \
+    export CARGO_HOME=/cargo && \
+    export RUSTUP_HOME=/rustup && \
+    export PATH="/cargo/bin:$PATH" && \
     rustup install 1.68.0 && \
-    mv /tmp/cargo /cargo && \
-    mv /tmp/rustup /rustup
+    rustup component add --toolchain 1.68.0 llvm-tools && \
+    rustup component add --toolchain 1.68.0 rustc-dev
 
 WORKDIR /lambda
 

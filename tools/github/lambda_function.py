@@ -29,22 +29,6 @@ def lambda_handler(event, context):
                 'body': 'Copy of actions-runner failed.'
             }
 
-        try:
-            subprocess.run(["cp", "-r", "/cargo", "/tmp/cargo"])
-        except Exception as e:
-            return {
-                'statusCode': 500,
-                'body': 'Copy of cargo failed.'
-            }
-
-        try:
-            subprocess.run(["cp", "-r", "/rustup", "/tmp/rustup"])
-        except Exception as e:
-            return {
-                'statusCode': 500,
-                'body': 'Copy of rustup failed.'
-            }
-
         os.chdir(runner_dir)
 
         try:
@@ -79,8 +63,9 @@ def lambda_handler(event, context):
                 'body': f"Failed to configure runner: {config_result.stderr.decode('utf-8')}"
             }
 
-        env_vars['CARGO_HOME'] = '/tmp/cargo'
-        env_vars['RUSTUP_HOME'] = '/tmp/rustup'
+        env_vars['CARGO_HOME'] = '/cargo'
+        env_vars['RUSTUP_HOME'] = '/rustup'
+        env_vars['PATH'] = '/cargo/bin:' + env_vars['PATH']
 
         run_result = subprocess.run(
             [
