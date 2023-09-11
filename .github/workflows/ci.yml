@@ -19,11 +19,13 @@ jobs:
       - name: check cargo fmt
         working-directory: ./source
         run: |
+          source "/root/.cargo/env"
           . ../tools/activate
           vargo fmt -- --check
       - name: check cargo fmt for vargo
         working-directory: ./tools/vargo
         run: |
+          source "/root/.cargo/env"
           cargo fmt -- --check
 
   test:
@@ -42,6 +44,7 @@ jobs:
       - name: cargo test
         working-directory: ./source
         run: |
+          source "/root/.cargo/env"
           . ../tools/activate
           vargo clean
           if [ "${{ matrix.features }}" == "singular" ]; then
@@ -61,6 +64,7 @@ jobs:
         if: matrix.features == ''
         working-directory: ./source
         run: |
+          source "/root/.cargo/env"
           ./tools/docs.sh
       - name: upload artifact
         uses: actions/upload-artifact@v2
