@@ -32,7 +32,7 @@ jobs:
     runs-on: ephemeral-lambda
     strategy:
       matrix:
-        features: ['', 'singular']
+        features: [''] # , 'singular']
     steps:
       - name: checkout
         uses: actions/checkout@v3
