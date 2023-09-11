@@ -59,13 +59,15 @@ RUN \
     cd /tmp && \
     mkdir -p /tmp/cargo && \
     mkdir -p /tmp/rustup && \
-    CARGO_HOME=/tmp/cargo RUSTUP_HOME=/tmp/rustup \
-    curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
+    export CARGO_HOME=/tmp/cargo && \
+    export RUSTUP_HOME=/tmp/rustup && \
+    curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y && \
+    mv /tmp/cargo /cargo && \
+    mv /tmp/rustup /rustup
 
 RUN \
     mkdir actions-runner && cd actions-runner && \
-    curl -o actions-runner-linux-arm64-2.308.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.308.0/actions-runner-linux-arm64-2.308.0.tar.gz && \
-    tar xzf ./actions-runner-linux-arm64-2.308.0.tar.gz
+    curl -o actions-runner-linux-arm64-2.308.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.308.0/actions-runner-linux-arm64-2.308.0.tar.gz
 
 RUN \
     mkdir /lambda && \

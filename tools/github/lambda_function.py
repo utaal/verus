@@ -25,11 +25,35 @@ def lambda_handler(event, context):
             subprocess.run(["cp", "-r", "/actions-runner", runner_dir])
         except Exception as e:
             return {
-                'statusCode': 400,
+                'statusCode': 500,
                 'body': 'Copy of actions-runner failed.'
             }
 
+        try:
+            subprocess.run(["cp", "-r", "/cargo", "/tmp/cargo"])
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'body': 'Copy of cargo failed.'
+            }
+
+        try:
+            subprocess.run(["cp", "-r", "/rustup", "/tmp/rustup"])
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'body': 'Copy of rustup failed.'
+            }
+
         os.chdir(runner_dir)
+
+        try:
+            subprocess.run(["tar", "xzf", "./actions-runner-linux-arm64-2.308.0.tar.gz"])
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'body': 'Cannot extract actions runner.'
+            }
 
         env_vars = os.environ.copy()
         env_vars["RUNNER_ALLOW_RUNASROOT"] = "1"
@@ -54,6 +78,9 @@ def lambda_handler(event, context):
                 'statusCode': 500,
                 'body': f"Failed to configure runner: {config_result.stderr.decode('utf-8')}"
             }
+
+        env_vars['CARGO_HOME'] = '/tmp/cargo'
+        env_vars['RUSTUP_HOME'] = '/tmp/rustup'
 
         run_result = subprocess.run(
             [
