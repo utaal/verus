@@ -1,6 +1,31 @@
+FROM ubuntu:22.04 AS build
+
+RUN \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get update && \
+    apt-get install -y \
+        build-essential \
+        curl \
+        python3
+
+RUN mkdir /root/z3 && cd /root/z3 && \
+    curl -LO https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.tar.gz && \
+    tar -xf z3-4.12.1.tar.gz && \
+    rm z3-4.12.1.tar.gz && \
+    cd z3-z3-4.12.1 && \
+    python3 scripts/mk_make.py && \
+    cd build && \
+    make && \
+    cp z3 ../../z3-4.12.1
+
 FROM ubuntu:22.04
 
 ARG GIT_VERSION="2.26.2"
+
+RUN \
+    mkdir -p /opt/z3
+    
+COPY --from=build /root/z3/z3-4.12.1 /opt/z3/z3-4.12.1
 
 RUN \
     DEBIAN_FRONTEND=noninteractive \
