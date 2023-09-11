@@ -9,14 +9,14 @@ RUN \
         python3
 
 RUN mkdir /root/z3 && cd /root/z3 && \
-    curl -LO https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.1.tar.gz && \
-    tar -xf z3-4.12.1.tar.gz && \
-    rm z3-4.12.1.tar.gz && \
-    cd z3-z3-4.12.1 && \
+    curl -LO https://github.com/Z3Prover/z3/archive/refs/tags/z3-4.12.2.tar.gz && \
+    tar -xf z3-4.12.2.tar.gz && \
+    rm z3-4.12.2.tar.gz && \
+    cd z3-z3-4.12.2 && \
     python3 scripts/mk_make.py && \
     cd build && \
     make && \
-    cp z3 ../../z3-4.12.1
+    cp z3 ../../z3-4.12.2
 
 FROM ubuntu:22.04
 
@@ -25,7 +25,7 @@ ARG GIT_VERSION="2.26.2"
 RUN \
     mkdir -p /opt/z3
     
-COPY --from=build /root/z3/z3-4.12.1 /opt/z3/z3-4.12.1
+COPY --from=build /root/z3/z3-4.12.2 /opt/z3/z3-4.12.2
 
 RUN \
     DEBIAN_FRONTEND=noninteractive \

@@ -39,7 +39,7 @@ jobs:
       - name: get z3
         working-directory: ./source
         run: |
-          cp /opt/z3/z3-4.12.1 z3
+          cp /opt/z3/z3-4.12.2 z3
           echo z3 version `./z3 --version`
       - name: cargo test
         working-directory: ./source
