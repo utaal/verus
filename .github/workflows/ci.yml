@@ -16,9 +16,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: setup rust
-        run: |
-          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
       - name: check cargo fmt
         working-directory: ./source
         run: |
@@ -42,14 +39,6 @@ jobs:
         run: |
           ../.github/workflows/get-z3.sh
           echo z3 version `./z3 --version`
-      - name: setup rust
-        run: |
-          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
-      - name: setup singular
-        if: matrix.features == 'singular'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y singular 
       - name: cargo test
         working-directory: ./source
         run: |
