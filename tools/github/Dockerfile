@@ -32,29 +32,12 @@ RUN \
         wget \
         curl \
         tar \
-        make \
         gzip \
         gcc \
         unzip \
         gettext \
         python3-pip \
         git
-
-# build-essential \
-# zlib1g-dev \
-# openssh-client \
-# libcurl4-openssl-dev \
-# singular
-
-# RUN cd /tmp && \
-#     curl -sL -o git.tgz \
-#     https://www.kernel.org/pub/software/scm/git/git-${GIT_VERSION}.tar.gz && \
-#     tar zxf git.tgz  && \
-#     cd git-${GIT_VERSION}  && \
-#     ./configure --prefix=/usr  && \
-#     make && \
-#     make install && \
-#     rm -rf /tmp/*
 
 RUN \
     mkdir -p /cargo && \
@@ -64,7 +47,7 @@ RUN \
     curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
 
 RUN \
-    mkdir actions-runner && cd actions-runner && \
+    mkdir /actions-runner && cd /actions-runner && \
     curl -o actions-runner-linux-arm64-2.308.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.308.0/actions-runner-linux-arm64-2.308.0.tar.gz
 
 RUN \
