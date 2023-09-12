@@ -1,9 +1,10 @@
 FROM verus-github-ephemeral-runner-base:latest 
 
+ENV CARGO_HOME=/cargo
+ENV RUSTUP_HOME=/rustup
+
 RUN \
-    export CARGO_HOME=/cargo && \
-    export RUSTUP_HOME=/rustup && \
-    export PATH="/cargo/bin:$PATH" && \
+    . /cargo/env && \
     rustup install 1.68.0 && \
     rustup component add --toolchain 1.68.0 llvm-tools && \
     rustup component add --toolchain 1.68.0 rustc-dev

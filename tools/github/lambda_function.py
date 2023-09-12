@@ -63,10 +63,6 @@ def lambda_handler(event, context):
                 'body': f"Failed to configure runner: {config_result.stderr.decode('utf-8')}"
             }
 
-        env_vars['CARGO_HOME'] = '/cargo'
-        env_vars['RUSTUP_HOME'] = '/rustup'
-        env_vars['PATH'] = '/cargo/bin:' + env_vars['PATH']
-
         run_result = subprocess.run(
             [
                 "./run.sh",
