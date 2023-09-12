@@ -32,6 +32,14 @@ def lambda_handler(event, context):
         os.chdir(runner_dir)
 
         try:
+            subprocess.run(["cp", "-r", "/cargo", "/tmp/cargo"])
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'body': 'Copy of cargo failed'
+            }
+
+        try:
             subprocess.run(["tar", "xzf", "./actions-runner-linux-arm64-2.308.0.tar.gz"])
         except Exception as e:
             return {
@@ -62,6 +70,9 @@ def lambda_handler(event, context):
                 'statusCode': 500,
                 'body': f"Failed to configure runner: {config_result.stderr.decode('utf-8')}"
             }
+
+        env_vars['CARGO_HOME'] = '/tmp/cargo'
+        env_vars['PATH'] = '/tmp/cargo/bin:' + env_vars['PATH']
 
         run_result = subprocess.run(
             [

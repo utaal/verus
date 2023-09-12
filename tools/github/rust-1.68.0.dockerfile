@@ -9,6 +9,8 @@ RUN \
     rustup component add --toolchain 1.68.0 llvm-tools && \
     rustup component add --toolchain 1.68.0 rustc-dev
 
+COPY lambda_function.py /lambda/lambda_function.py
+
 WORKDIR /lambda
 
 ENTRYPOINT [ "/usr/bin/python3", "-m", "awslambdaric" ]
