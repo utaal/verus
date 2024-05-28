@@ -36,7 +36,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        features: ['', 'singular'] # TODO ['record-history', 'no-std', 'no-alloc'] # TODO ['singular']
+        features: [''] # TODO ['singular', 'record-history', 'no-std', 'no-alloc']
     steps:
       - name: checkout
         uses: actions/checkout@v4
