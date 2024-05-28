@@ -36,7 +36,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        features: [''] # TODO ['record-history', 'no-std', 'no-alloc'] # TODO ['singular']
+        features: ['', 'singular'] # TODO ['record-history', 'no-std', 'no-alloc'] # TODO ['singular']
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -51,8 +51,8 @@ jobs:
       - name: setup singular
         if: matrix.features == 'singular'
         run: |
-          echo "todo singular set-up on macos"
-          exit -1
+          curl -LO https://www.singular.uni-kl.de/ftp/pub/Math/Singular/UNIX/Singular-4-4-0_M1.dmg
+          hdiutil attach Singular-4-4-0_M1.dmg
       - name: build and test
         working-directory: ./source
         run: |
@@ -62,9 +62,9 @@ jobs:
           case "${{ matrix.features }}" in
             "singular")
               vargo build --features singular
-              VERUS_Z3_PATH="$(pwd)/z3" VERUS_SINGULAR_PATH="/usr/bin/Singular" vargo test -p air --features singular
-              VERUS_Z3_PATH="$(pwd)/z3" VERUS_SINGULAR_PATH="/usr/bin/Singular" vargo test -p rust_verify_test --features singular --test integer_ring
-              VERUS_Z3_PATH="$(pwd)/z3" VERUS_SINGULAR_PATH="/usr/bin/Singular" vargo test -p rust_verify_test --features singular --test examples -- example_integer_ring
+              DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p air --features singular
+              DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p rust_verify_test --features singular --test integer_ring
+              DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p rust_verify_test --features singular --test examples -- example_integer_ring
               ;;
             "record-history")
               vargo build --features record-history
