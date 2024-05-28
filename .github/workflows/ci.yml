@@ -97,6 +97,7 @@ jobs:
           . ../tools/activate
           vargo clean
           vargo build --release
+          ./target-verus/release/verus --version --output-json > ./target-verus/release/version.json
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
         if: matrix.features == ''
@@ -148,6 +149,7 @@ jobs:
         run: |
           ../tools/activate.ps1
           $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo build --release
+          ./target-verus/release/verus --version --output-json > ./target-verus/release/version.json
         shell: powershell
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
@@ -181,6 +183,7 @@ jobs:
           . ../tools/activate
           vargo clean
           vargo build --release
+          ./target-verus/release/verus --version --output-json > ./target-verus/release/version.json
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
         with:
