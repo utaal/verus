@@ -3,7 +3,7 @@ name: ci
 on:
   push:
     branches:
-      - 'main'
+      - 'binary-releases'
 
   workflow_dispatch:
 
@@ -149,6 +149,7 @@ jobs:
         run: |
           ../tools/activate.ps1
           $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo build --release
+          $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; ./target-verus/release/verus.exe --version --output-json > ./target-verus/release/version.json
         shell: powershell
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
