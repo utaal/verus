@@ -62,6 +62,7 @@ jobs:
           case "${{ matrix.features }}" in
             "singular")
               vargo build --features singular
+              echo $DYLD_LIBRARY_PATH
               DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p air --features singular
               DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p rust_verify_test --features singular --test integer_ring
               DYLD_LIBRARY_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/lib VERUS_SINGULAR_PATH=/Volumes/Singular4.4.0/Singular.app/Contents/bin/Singular vargo test -p rust_verify_test --features singular --test examples -- example_integer_ring
