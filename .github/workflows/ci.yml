@@ -199,7 +199,12 @@ jobs:
 
       - name: create release tag
         shell: bash
-        run: echo "TAG_NAME=$(cat ./verus-x86-linux/version.txt)" >> $GITHUB_ENV
+        run: |
+          echo "TAG_NAME=v$(cat ./verus-x86-linux/version.txt)" >> $GITHUB_ENV
+          echo $TAG_NAME
+        
+      - name: list artifacts
+        run: ls -R
 
       - name: create release
         id: create_release
@@ -210,9 +215,6 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           release_name: Rolling Release ${{ env.TAG_NAME }}
           keep_num: 4
-        
-      - name: list artifacts
-        run: ls -R
 
       # - name: upload release for linux
       #   uses: actions/upload-release-asset@v1
