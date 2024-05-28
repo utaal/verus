@@ -1027,19 +1027,24 @@ fn run() -> Result<(), String> {
 
             let mut dependencies_mtime = None;
             let mut dependency_missing = false;
-            
-            let mut macos_prepare_script = format!(r#"
+
+            let mut macos_prepare_script = format!(
+                r#"
 #!/bin/bash
 set -e
 set -x
 
-"#);
+"#
+            );
             use std::fmt::Write;
 
             for (from_f_name, is_exe) in [
                 (format!("libbuiltin.rlib"), false),
                 (format!("{}builtin_macros.{}", LIB_PRE, LIB_DL), false),
-                (format!("{}state_machines_macros.{}", LIB_PRE, LIB_DL), false),
+                (
+                    format!("{}state_machines_macros.{}", LIB_PRE, LIB_DL),
+                    false,
+                ),
                 (format!("rust_verify{}", EXE), false),
                 (format!("verus{}", EXE), false),
             ]
@@ -1071,10 +1076,14 @@ set -x
 
                     std::fs::copy(&from_f, &to_f)
                         .map_err(|x| format!("could not copy file ({})", x))?;
-                    
+
                     if is_exe {
-                        write!(&mut macos_prepare_script, "xattr -d com.apple.quarantine {}", from_f_name)
-                            .map_err(|x| format!("could not write to macos prepare script ({})", x))?;
+                        write!(
+                            &mut macos_prepare_script,
+                            "xattr -d com.apple.quarantine {}",
+                            from_f_name
+                        )
+                        .map_err(|x| format!("could not write to macos prepare script ({})", x))?;
                     }
                 } else {
                     dependency_missing = true;
@@ -1093,9 +1102,15 @@ set -x
                 std::fs::copy(&from_f, &to_f)
                     .map_err(|x| format!("could not copy file ({})", x))?;
 
-                let dest_file_name = to_f.file_name().ok_or(format!("could not get file name for z3"))?;
-                write!(&mut macos_prepare_script, "xattr -d com.apple.quarantine {}", dest_file_name.to_string_lossy())
-                    .map_err(|x| format!("could not write to macos prepare script ({})", x))?;
+                let dest_file_name = to_f
+                    .file_name()
+                    .ok_or(format!("could not get file name for z3"))?;
+                write!(
+                    &mut macos_prepare_script,
+                    "xattr -d com.apple.quarantine {}",
+                    dest_file_name.to_string_lossy()
+                )
+                .map_err(|x| format!("could not write to macos prepare script ({})", x))?;
             }
 
             let fingerprint_path = target_verus_dir.join(".vstd-fingerprint");
@@ -1204,15 +1219,21 @@ set -x
                     }
                 }
             }
-            
-            #[cfg(target_os = "macos")] {
+
+            #[cfg(target_os = "macos")]
+            {
                 let macos_prepare_script_path = target_verus_dir.join("macos_gatekeeper_allow.sh");
                 std::fs::write(&macos_prepare_script_path, macos_prepare_script)
                     .map_err(|x| format!("could not write to macos prepare script ({})", x))?;
-                std::fs::set_permissions(&macos_prepare_script_path, <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755))
-                    .map_err(|x| format!("could not set permissions on macos prepare script ({})", x))?;
+                std::fs::set_permissions(
+                    &macos_prepare_script_path,
+                    <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755),
+                )
+                .map_err(|x| {
+                    format!("could not set permissions on macos prepare script ({})", x)
+                })?;
             }
-            
+
             if let Some(version_info) = verus_version {
                 let version_info_path = target_verus_dir.join("version.txt");
                 std::fs::write(&version_info_path, version_info.version)
