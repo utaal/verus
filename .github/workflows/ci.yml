@@ -199,16 +199,16 @@ jobs:
 
       - name: create release tag
         shell: bash
-        run: echo "TAG_NAME=$(date +v-%Y-%m-%d-%H%M)" >> $GITHUB_ENV
+        run: echo "TAG_NAME=$(cat ./verus-x86-linux/version.txt)" >> $GITHUB_ENV
 
-      - name: create nightly release
+      - name: create release
         id: create_release
         uses: viperproject/create-nightly-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.TAG_NAME }}
-          release_name: Nightly Release ${{ env.TAG_NAME }}
+          release_name: Rolling Release ${{ env.TAG_NAME }}
           keep_num: 4
         
       - name: list artifacts
