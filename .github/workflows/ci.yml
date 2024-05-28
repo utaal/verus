@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: matrix.features == ''
         with:
-            name: verus-${{ github.sha }}-arm64-macos
+            name: verus-arm64-macos
             path: source/target-verus/release
       - name: build docs
         if: matrix.features == ''
@@ -154,7 +154,7 @@ jobs:
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
         with:
-            name: verus-${{ github.sha }}-x86-win
+            name: verus-x86-win
             path: source/target-verus/release
 
   smoke-test-and-release-linux:
@@ -187,7 +187,7 @@ jobs:
       - name: upload verus release artifact
         uses: actions/upload-artifact@v4
         with:
-            name: verus-${{ github.sha }}-x86-linux
+            name: verus-x86-linux
             path: source/target-verus/release
 
   release:
@@ -214,7 +214,7 @@ jobs:
       - name: list artifacts
         run: ls -R
 
-      # - name: Upload release asset for Ubuntu
+      # - name: upload release for linux
       #   uses: actions/upload-release-asset@v1
       #   env:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
