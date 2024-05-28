@@ -191,7 +191,7 @@ jobs:
             path: source/target-verus/release
 
   release:
-    depends-on: [fmt, smoke-test-and-release-linux, smoke-test-and-release-windows, test-and-release-macos]
+    needs: [fmt, smoke-test-and-release-linux, smoke-test-and-release-windows, test-and-release-macos]
     runs-on: ubuntu-latest
     steps:
       - name: download all artifacts
