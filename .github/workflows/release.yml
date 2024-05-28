@@ -5,6 +5,8 @@ on:
     workflows: [ci]
     branches: [binary-releases]
     types: [completed]
+  
+  workflow_dispatch:
 
 jobs:
   release:
