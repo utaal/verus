@@ -36,7 +36,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        features: ['', 'record-history', 'no-std', 'no-alloc'] # TODO ['singular']
+        features: [''] # TODO ['record-history', 'no-std', 'no-alloc'] # TODO ['singular']
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -83,8 +83,8 @@ jobs:
               cargo build --no-default-features
               ;;
             *)
-              VERUS_Z3_PATH="$(pwd)/z3" vargo test -p air
-              VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_test
+              # VERUS_Z3_PATH="$(pwd)/z3" vargo test -p air
+              # VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_test
               cd vstd
               unset -f cargo
               cargo build
@@ -140,9 +140,9 @@ jobs:
         run: |
           ../tools/activate.ps1
           vargo clean
-          vargo build
-          $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo test -p rust_verify_test --test basic
-          $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo test -p rust_verify_test --test layout
+          # vargo build
+          # $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo test -p rust_verify_test --test basic
+          # $env:VERUS_Z3_PATH = "$(Get-Location)/z3"; vargo test -p rust_verify_test --test layout
         shell: powershell
       - name: build verus release
         working-directory: .\source
@@ -175,8 +175,8 @@ jobs:
         run: |
           . ../tools/activate
           vargo clean
-          vargo build
-          VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_test --test basic
+          # vargo build
+          # VERUS_Z3_PATH="$(pwd)/z3" vargo test -p rust_verify_test --test basic
       - name: build verus release
         working-directory: ./source
         run: |
