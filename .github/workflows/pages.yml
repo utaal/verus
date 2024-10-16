@@ -1,10 +1,11 @@
 name: pages
 
 on:
-  workflow_run:
-    workflows: [ci]
-    branches: [main]
-    types: [completed]
+  push:
+    branches:
+      - 'logo'
+
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,44 +19,19 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: setup mdbook
-        run: |
-          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz > mdbook.tar.gz
-          tar -xvf mdbook.tar.gz
-          rm mdbook.tar.gz
-          chmod +x mdbook
+
       - name: set-up dir structure
         run: |
           mkdir ./_site
 
-      - name: build guide book
-        run: |
-          mkdir ./_site/guide
-          ./mdbook build -d ../../../_site/guide source/docs/guide
-
-      - name: build state_machines book
-        run: |
-          mkdir ./_site/state_machines
-          ./mdbook build -d ../../../_site/state_machines source/docs/state_machines
-
-      - name: download verusdoc artifact
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          name: verusdoc
-          workflow: .github/workflows/ci.yml
-          run_id: ${{ github.event.workflow_run.id }}
-          workflow_conclusion: success
-          path: ./_site/verusdoc
-      
-      - name: add publications and projects page
+      - name: add verus pages
         uses: actions/jekyll-build-pages@v1
         with:
-          source: source/docs/publications-and-projects
-          destination: ./_site/publications-and-projects
+          source: source/docs/verus
+          destination: ./_site/verus
 
       - name: upload artifact
         uses: actions/upload-pages-artifact@v1
